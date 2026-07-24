@@ -1,0 +1,31 @@
+<title>Hermes Digest Board</title>
+<link rel="stylesheet" href="style.css">
+
+<div class="topbar">
+  <h1>Hermes Digest</h1>
+  <div class="filters" id="filters"></div>
+  <div class="auth" id="auth"></div>
+</div>
+
+<div class="board" id="board">
+  <div class="column" data-status="new">
+    <h2>New</h2>
+    <div class="cards" data-status="new"></div>
+  </div>
+  <div class="column" data-status="interested">
+    <h2>Interested</h2>
+    <div class="cards" data-status="interested"></div>
+  </div>
+  <div class="column" data-status="done">
+    <h2>Done</h2>
+    <div class="cards" data-status="done"></div>
+  </div>
+  <div class="column" data-status="not_interested">
+    <h2>Not interested</h2>
+    <div class="cards" data-status="not_interested"></div>
+  </div>
+</div>
+
+<p class="hint" id="hint"></p>
+
+<script type="module" src="app.js"></script>
