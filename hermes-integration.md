@@ -34,11 +34,14 @@ internship listing, event, etc. — NOT one row per email), upsert into
   "category": "internship",
   "title": "AI Product Management Intern — Horizon Labs",
   "summary": "AI/ML product role, Y2 CS eligible.",
+  "details": "Full context that doesn't fit the card face: why it matters, eligibility notes, related links, quoted specifics from the email (e.g. 'addressed to Y3 scholars — verify eligibility'). Shown in the board's slide-out detail panel when a card is clicked. This is where the richer prose from the old Markdown digest style belongs — don't just repeat `summary`.",
   "sender": "JOB-BLAST@ntu.edu.sg",
   "link": "https://careeraxis.ntu.edu.sg/students/jobs/861104",
   "deadline_date": "2026-08-07"
 }
 ```
+
+`summary` stays a short one-liner for the compact card; `details` carries the fuller write-up — aim for the level of detail the old Markdown digests had per item (context, "why it matters", caveats), not just a repeat of the title.
 
 Use `id` as a stable idempotency key (hash the link, or use NTU's own job ID
 when present) so the same recurring listing doesn't spawn duplicate cards

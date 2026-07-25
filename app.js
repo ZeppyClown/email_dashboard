@@ -25,6 +25,9 @@ const boardEl = document.getElementById("board");
 const filtersEl = document.getElementById("filters");
 const authEl = document.getElementById("auth");
 const hintEl = document.getElementById("hint");
+const drawerEl = document.getElementById("drawer");
+const drawerContentEl = document.getElementById("drawerContent");
+const backdropEl = document.getElementById("backdrop");
 
 function renderFilters() {
   filtersEl.innerHTML = "";
@@ -67,6 +70,52 @@ function renderAuth() {
   }
 }
 
+function openDrawer(item) {
+  drawerContentEl.innerHTML = "";
+
+  const tag = document.createElement("span");
+  tag.className = `tag ${item.category}`;
+  tag.textContent = item.category;
+
+  const title = document.createElement("h3");
+  title.textContent = item.title;
+
+  const senderRow = document.createElement("div");
+  senderRow.className = "meta-row";
+  senderRow.textContent = item.sender ? `From ${item.sender}` : "";
+
+  const dateRow = document.createElement("div");
+  dateRow.className = "meta-row";
+  dateRow.textContent = `Digest date: ${item.digest_date}` + (item.deadline_date ? ` · Due ${item.deadline_date}` : "");
+
+  const body = document.createElement("div");
+  body.className = "details-text";
+  body.textContent = item.details || item.summary || "No further detail recorded for this item.";
+
+  drawerContentEl.appendChild(tag);
+  drawerContentEl.appendChild(title);
+  if (item.sender) drawerContentEl.appendChild(senderRow);
+  drawerContentEl.appendChild(dateRow);
+  drawerContentEl.appendChild(body);
+
+  if (item.link) {
+    const a = document.createElement("a");
+    a.href = item.link;
+    a.textContent = "Open link ↗";
+    a.target = "_blank";
+    a.className = "drawer-link";
+    drawerContentEl.appendChild(a);
+  }
+
+  drawerEl.classList.add("open");
+  backdropEl.classList.add("open");
+}
+
+function closeDrawer() {
+  drawerEl.classList.remove("open");
+  backdropEl.classList.remove("open");
+}
+
 function cardEl(item) {
   const el = document.createElement("div");
   el.className = "card";
@@ -107,8 +156,11 @@ function cardEl(item) {
     a.style.fontSize = "12px";
     a.style.display = "inline-block";
     a.style.marginTop = "6px";
+    a.addEventListener("click", (e) => e.stopPropagation());
     el.appendChild(a);
   }
+
+  el.addEventListener("click", () => openDrawer(item));
 
   el.addEventListener("dragstart", (e) => {
     e.dataTransfer.setData("text/plain", item.id);
@@ -190,6 +242,11 @@ async function init() {
 
   renderFilters();
   wireDropZones();
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  backdropEl.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDrawer();
+  });
   await loadItems();
 
   supabase

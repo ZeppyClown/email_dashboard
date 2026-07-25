@@ -6,7 +6,8 @@ create table if not exists digest_items (
   digest_date date not null,
   category text not null check (category in ('deadline','internship','scholarship','course','other')),
   title text not null,
-  summary text,
+  summary text,          -- short blurb shown on the card face
+  details text,          -- fuller write-up shown in the detail panel (why it matters, context, etc.)
   sender text,
   link text,
   deadline_date date,
