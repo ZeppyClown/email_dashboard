@@ -6,5 +6,5 @@
 // NEVER put your service_role key here or anywhere in this folder — that
 // key stays local, used only by Hermes to write new digest items.
 
-export const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-export const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+export const SUPABASE_URL = "https://cwqyybpqidrcegjobylu.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_Ki1hmB28KsJMTWDq2U71vw_rTGZ1f7d";
