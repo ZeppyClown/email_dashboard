@@ -8,6 +8,12 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
 
+// Hardcoded (not derived from window.location) so it always matches exactly
+// what's in Supabase's Redirect URLs allow-list — a URL missing/gaining a
+// trailing slash on first load is enough for Supabase to reject it and
+// silently fall back to the default Site URL instead.
+const REDIRECT_URL = "https://zeppyclown.github.io/email_dashboard/";
+
 const STATUSES = ["new", "interested", "done", "not_interested"];
 const CATEGORIES = ["deadline", "internship", "scholarship", "course", "other"];
 
@@ -54,7 +60,7 @@ function renderAuth() {
     btn.onclick = () => {
       supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin + window.location.pathname },
+        options: { redirectTo: REDIRECT_URL },
       });
     };
     authEl.appendChild(btn);
