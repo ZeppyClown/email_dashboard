@@ -1,7 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// persistSession + autoRefreshToken keep you signed in across visits/reloads
+// (stored in this browser's localStorage); detectSessionInUrl handles the
+// redirect back from Google.
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
 
 const STATUSES = ["new", "interested", "done", "not_interested"];
 const CATEGORIES = ["deadline", "internship", "scholarship", "course", "other"];
@@ -38,20 +43,20 @@ function renderAuth() {
     span.textContent = `Signed in as ${session.user.email}`;
     span.style.fontSize = "12px";
     span.style.color = "var(--muted)";
+    const signOutBtn = document.createElement("button");
+    signOutBtn.textContent = "Sign out";
+    signOutBtn.onclick = () => supabase.auth.signOut();
     authEl.appendChild(span);
+    authEl.appendChild(signOutBtn);
   } else {
-    const input = document.createElement("input");
-    input.type = "email";
-    input.placeholder = "you@email.com";
     const btn = document.createElement("button");
-    btn.textContent = "Sign in to edit";
-    btn.onclick = async () => {
-      if (!input.value) return;
-      btn.textContent = "Sending...";
-      const { error } = await supabase.auth.signInWithOtp({ email: input.value });
-      btn.textContent = error ? "Failed — retry" : "Check your email";
+    btn.textContent = "Sign in with Google";
+    btn.onclick = () => {
+      supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + window.location.pathname },
+      });
     };
-    authEl.appendChild(input);
     authEl.appendChild(btn);
   }
 }

@@ -68,15 +68,6 @@ body {
   color: var(--accent);
 }
 
-.auth input {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 13px;
-}
-
 .auth button {
   padding: 6px 10px;
   border: 1px solid var(--border);
