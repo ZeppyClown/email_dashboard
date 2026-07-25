@@ -39,12 +39,15 @@ drop policy if exists "public read" on digest_items;
 create policy "public read" on digest_items
   for select using (true);
 
--- Only a signed-in user (you, via magic link) can change a card's status.
+-- Only YOU (matched by email, not just "any signed-in user") can change a
+-- card's status. Anyone can request a magic link for their own email and
+-- become "authenticated" — checking auth.role() alone would let a stranger
+-- who finds the sign-in box edit the board. Checking the email closes that.
 drop policy if exists "authenticated update status" on digest_items;
-create policy "authenticated update status" on digest_items
+create policy "owner update status" on digest_items
   for update
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using ((auth.jwt() ->> 'email') = 'victorchua865@gmail.com')
+  with check ((auth.jwt() ->> 'email') = 'victorchua865@gmail.com');
 
 -- Inserts/deletes only happen from Hermes using the service_role key (bypasses RLS),
 -- never from the browser. Explicitly lock the browser roles out.
