@@ -101,9 +101,12 @@ function openDrawer(item) {
   // (Country, Commences) rather than replacing them: Country says "Australia",
   // Location says "Fully remote".
   const FIELD_ORDER = [
-    "Position", "Employer", "Industry", "Country", "Location", "Commences",
-    "Start Date", "Remuneration", "Vacancies", "Published", "Closes", "Added",
-    "Occupation", "Contract type", "CareerAxis ID",
+    "Position", "Employer", "Employer site", "Industry",
+    "Country", "Location", "Address", "Work model",
+    "Commences", "Start Date", "Remuneration", "Vacancies",
+    "Hours", "Contract type", "Residency",
+    "Published", "Closes", "Added",
+    "Occupation", "Contact", "CareerAxis ID",
   ];
   const entries = Object.entries(item.meta || {}).sort(([a], [b]) => {
     const ia = FIELD_ORDER.indexOf(a);
