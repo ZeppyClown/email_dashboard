@@ -96,10 +96,14 @@ function openDrawer(item) {
   // spreadsheet's own column order, so a card reads like its source row.
   // Anything not listed renders after, alphabetically, so a new key added by a
   // future writer still shows up instead of silently vanishing.
+  // Location and Start Date come from the listing page rather than the
+  // spreadsheet, and sit next to their coarser spreadsheet equivalents
+  // (Country, Commences) rather than replacing them: Country says "Australia",
+  // Location says "Fully remote".
   const FIELD_ORDER = [
-    "Position", "Employer", "Industry", "Country", "Commences", "Remuneration",
-    "Vacancies", "Published", "Closes", "Added", "Occupation", "Contract type",
-    "CareerAxis ID",
+    "Position", "Employer", "Industry", "Country", "Location", "Commences",
+    "Start Date", "Remuneration", "Vacancies", "Published", "Closes", "Added",
+    "Occupation", "Contract type", "CareerAxis ID",
   ];
   const entries = Object.entries(item.meta || {}).sort(([a], [b]) => {
     const ia = FIELD_ORDER.indexOf(a);
