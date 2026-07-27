@@ -8,6 +8,14 @@ create table if not exists digest_items (
   title text not null,
   summary text,          -- short blurb shown on the card face
   details text,          -- fuller write-up shown in the detail panel (why it matters, context, etc.)
+  meta jsonb,            -- ordered key/value facts rendered as a table above `details`.
+                         -- Internships carry the full CareerAxis row: Position, Employer,
+                         -- Industry, Country, Commences, Remuneration, Vacancies, Published,
+                         -- Closes, Added, Occupation, Contract type, CareerAxis ID.
+                         -- Free-form on purpose: a course item wants different keys than
+                         -- an internship, and a jsonb blob beats a migration per category.
+                         -- Adding keys needs no migration — jsonb, and the drawer renders
+                         -- whatever keys it finds, in insertion order.
   sender text,
   link text,
   deadline_date date,
@@ -15,6 +23,10 @@ create table if not exists digest_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- `create table if not exists` above is a no-op on an existing board, so new
+-- columns need their own idempotent ALTER to reach a database created earlier.
+alter table digest_items add column if not exists meta jsonb;
 
 create index if not exists idx_digest_items_status on digest_items(status);
 create index if not exists idx_digest_items_sender on digest_items(sender);

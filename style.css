@@ -233,6 +233,30 @@ body {
   margin-bottom: 4px;
 }
 
+.drawer .facts {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.drawer .facts dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.drawer .facts dd {
+  margin: 0;
+  /* Long values (function tags, employer names) wrap instead of forcing the
+     grid wider than the drawer. */
+  overflow-wrap: anywhere;
+}
+
 .drawer .details-text {
   margin-top: 16px;
   font-size: 14px;

@@ -88,6 +88,40 @@ function openDrawer(item) {
   dateRow.className = "meta-row";
   dateRow.textContent = `Digest date: ${item.digest_date}` + (item.deadline_date ? ` · Due ${item.deadline_date}` : "");
 
+  // `meta` is an object of plain key/value facts (Remuneration, Vacancies, …).
+  // The order has to be imposed here, not by the writer: the column is `jsonb`,
+  // and Postgres normalises jsonb key order (shortest key first, then
+  // bytewise), so whatever order Hermes inserted them in is already lost by the
+  // time they come back. Keys below render in this order — the JOB-BLAST
+  // spreadsheet's own column order, so a card reads like its source row.
+  // Anything not listed renders after, alphabetically, so a new key added by a
+  // future writer still shows up instead of silently vanishing.
+  const FIELD_ORDER = [
+    "Position", "Employer", "Industry", "Country", "Commences", "Remuneration",
+    "Vacancies", "Published", "Closes", "Added", "Occupation", "Contract type",
+    "CareerAxis ID",
+  ];
+  const entries = Object.entries(item.meta || {}).sort(([a], [b]) => {
+    const ia = FIELD_ORDER.indexOf(a);
+    const ib = FIELD_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  const facts = document.createElement("dl");
+  facts.className = "facts";
+  for (const [k, v] of entries) {
+    if (v === null || v === undefined || v === "") continue;
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = String(v);
+    facts.appendChild(dt);
+    facts.appendChild(dd);
+  }
+
   const body = document.createElement("div");
   body.className = "details-text";
   body.textContent = item.details || item.summary || "No further detail recorded for this item.";
@@ -96,6 +130,7 @@ function openDrawer(item) {
   drawerContentEl.appendChild(title);
   if (item.sender) drawerContentEl.appendChild(senderRow);
   drawerContentEl.appendChild(dateRow);
+  if (facts.childElementCount) drawerContentEl.appendChild(facts);
   drawerContentEl.appendChild(body);
 
   if (item.link) {

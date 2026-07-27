@@ -35,6 +35,13 @@ internship listing, event, etc. — NOT one row per email), upsert into
   "title": "AI Product Management Intern — Horizon Labs",
   "summary": "AI/ML product role, Y2 CS eligible.",
   "details": "Full context that doesn't fit the card face: why it matters, eligibility notes, related links, quoted specifics from the email (e.g. 'addressed to Y3 scholars — verify eligibility'). Shown in the board's slide-out detail panel when a card is clicked. This is where the richer prose from the old Markdown digest style belongs — don't just repeat `summary`.",
+  "meta": {
+    "Employer": "Horizon Labs",
+    "Pay": "$500 – $1,000 Monthly",
+    "Starts": "Jul/Aug-26",
+    "Vacancies": "10",
+    "Function": "Software / Multimedia / App Developer"
+  },
   "sender": "JOB-BLAST@ntu.edu.sg",
   "link": "https://careeraxis.ntu.edu.sg/students/jobs/861104",
   "deadline_date": "2026-08-07"
@@ -42,6 +49,27 @@ internship listing, event, etc. — NOT one row per email), upsert into
 ```
 
 `summary` stays a short one-liner for the compact card; `details` carries the fuller write-up — aim for the level of detail the old Markdown digests had per item (context, "why it matters", caveats), not just a repeat of the title.
+
+`meta` is an open-ended object of short key/value facts, rendered as a table at
+the top of the detail panel, in the order you write the keys. Use it for the
+things that are a phrase rather than a paragraph — pay, vacancies, start date,
+venue, duration. Keys differ per category and that's fine.
+
+### Don't drop the spreadsheet columns
+
+The JOB-BLAST xlsx attachments carry `Summary`, `Remuneration`, `Vacancies`,
+`Commences`, `Occupation(s)`, `Industry` and `Contract type` per listing. Early
+digests kept only title/employer/deadline/link, which is why the internship
+cards opened to an empty panel. Those columns are the entire content of the
+detail panel — carry `Summary` into `details` and the rest into `meta`.
+
+Note what the spreadsheet does **not** have: a requirements column. Year of
+study, GPA, tech stack and duration exist only on the CareerAxis listing page
+(NTU login). Don't invent them — say they're on the listing and link it.
+
+`scripts/upsert_internships.py` does exactly this for the internship sheet and
+is the reference implementation; run it standalone to backfill, or fold its
+`build_item()` mapping into the digest job.
 
 Use `id` as a stable idempotency key (hash the link, or use NTU's own job ID
 when present) so the same recurring listing doesn't spawn duplicate cards

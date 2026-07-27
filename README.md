@@ -7,6 +7,8 @@ site (no build step) meant for GitHub Pages, backed by Supabase.
 
 1. **Supabase**
    - Open your existing Supabase project's SQL editor and run `schema.sql`.
+     It's idempotent — re-run it after pulling changes to pick up new columns
+     (the `meta` facts column was added this way).
    - In **Authentication → Providers**, make sure Email (magic link) is enabled.
    - In **Authentication → URL Configuration**, add your GitHub Pages URL
      (e.g. `https://yourname.github.io/repo/`) as a redirect URL, or the
