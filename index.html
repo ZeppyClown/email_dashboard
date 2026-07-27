@@ -7,21 +7,44 @@
   <div class="auth" id="auth"></div>
 </div>
 
+<div class="toolbar">
+  <input type="search" id="search" class="search" placeholder="Search title, summary, employer…" autocomplete="off">
+  <label class="toggle">
+    <input type="checkbox" id="hideExpired" checked>
+    Hide past deadlines
+  </label>
+  <!-- Only meaningful while the hackathon pill is active, so app.js shows and
+       hides the whole group rather than leaving a dead control in the bar. -->
+  <label class="toggle" id="teamSizeWrap" hidden>
+    Team size
+    <select id="teamSize">
+      <option value="">any</option>
+      <option value="1">1 (solo)</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+    </select>
+  </label>
+  <span class="count" id="count"></span>
+</div>
+
 <div class="board" id="board">
   <div class="column" data-status="new">
-    <h2>New</h2>
+    <h2>New <span class="col-count" data-count="new"></span></h2>
     <div class="cards" data-status="new"></div>
   </div>
   <div class="column" data-status="interested">
-    <h2>Interested</h2>
+    <h2>Interested <span class="col-count" data-count="interested"></span></h2>
     <div class="cards" data-status="interested"></div>
   </div>
   <div class="column" data-status="done">
-    <h2>Done</h2>
+    <h2>Done <span class="col-count" data-count="done"></span></h2>
     <div class="cards" data-status="done"></div>
   </div>
   <div class="column" data-status="not_interested">
-    <h2>Not interested</h2>
+    <h2>Not interested <span class="col-count" data-count="not_interested"></span></h2>
     <div class="cards" data-status="not_interested"></div>
   </div>
 </div>

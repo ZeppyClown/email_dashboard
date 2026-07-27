@@ -7,6 +7,7 @@
   --accent: #2f6fed;
   --deadline: #eb5757;
   --internship: #2f6fed;
+  --hackathon: #e8833a;
   --scholarship: #9b51e0;
   --course: #219653;
   --other: #6b6b6b;
@@ -29,13 +30,16 @@ body {
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
+  /* The board manages its own scrolling per column, so the page itself never
+     grows past one screen — that is the whole point of the layout below. */
+  overflow: hidden;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 24px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
@@ -68,6 +72,12 @@ body {
   color: var(--accent);
 }
 
+.chip .chip-n {
+  opacity: .6;
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 .auth button {
   padding: 6px 10px;
   border: 1px solid var(--border);
@@ -78,12 +88,61 @@ body {
   cursor: pointer;
 }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 420px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.toggle select {
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(230px, 1fr));
   gap: 16px;
-  padding: 16px 24px;
+  padding: 16px 24px 8px;
   overflow-x: auto;
+  /* Fixed board height is what stops the page growing with the New column.
+     Everything below the header rows gets the remaining viewport. */
+  height: calc(100vh - 175px);
 }
 
 .column {
@@ -91,7 +150,9 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px;
-  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;   /* lets the .cards child actually shrink and scroll */
 }
 
 .column h2 {
@@ -100,80 +161,174 @@ body {
   letter-spacing: .04em;
   color: var(--muted);
   margin: 4px 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+.col-count {
+  font-variant-numeric: tabular-nums;
+  opacity: .7;
 }
 
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 60px;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding-right: 2px;
 }
 
 .cards.drag-over {
   outline: 2px dashed var(--accent);
-  outline-offset: 4px;
+  outline-offset: 2px;
   border-radius: 8px;
 }
+
+.cards::-webkit-scrollbar { width: 8px; }
+.cards::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* ---- urgency groups ---- */
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 8px 4px 4px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.group-head .caret {
+  transition: transform .15s ease;
+  display: inline-block;
+}
+
+.group-head.collapsed .caret {
+  transform: rotate(-90deg);
+}
+
+.group-head .group-n {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: .7;
+}
+
+.group-head.overdue { color: var(--deadline); }
+
+/* ---- cards ---- */
 
 .card {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 6px;
+  padding: 7px 8px;
   cursor: grab;
 }
 
-.card[draggable="false"] {
-  cursor: default;
+.card[draggable="false"] { cursor: default; }
+.card.dragging { opacity: 0.4; }
+
+/* Collapsed row: one line, ~34px. A dot carries the category instead of a
+   full-width tag, which is what buys the density. */
+.card .row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
 }
 
-.card.dragging {
-  opacity: 0.4;
+.card .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
 }
 
-.card .tag {
-  display: inline-block;
+.dot.deadline { background: var(--deadline); }
+.dot.internship { background: var(--internship); }
+.dot.hackathon { background: var(--hackathon); }
+.dot.scholarship { background: var(--scholarship); }
+.dot.course { background: var(--course); }
+.dot.other { background: var(--other); }
+
+.card .row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.card .row-due {
+  flex: 0 0 auto;
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: white;
-  margin-bottom: 6px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.tag.deadline { background: var(--deadline); }
-.tag.internship { background: var(--internship); }
-.tag.scholarship { background: var(--scholarship); }
-.tag.course { background: var(--course); }
-.tag.other { background: var(--other); }
+.card .row-due.soon { color: var(--deadline); font-weight: 600; }
 
-.card .title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
+.card .expand {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1;
 }
 
-.card .summary {
+.card .expand .caret {
+  display: inline-block;
+  transition: transform .15s ease;
+}
+
+.card.open .expand .caret { transform: rotate(90deg); }
+
+.card .body {
+  margin: 6px 0 2px 14px;
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 6px;
-}
-
-.card .meta {
-  font-size: 11px;
-  color: var(--muted);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.card a {
-  color: var(--accent);
+.card .body .note-flag {
+  color: var(--text);
+  font-style: italic;
+  opacity: .85;
+}
+
+.card .body a { color: var(--accent); }
+
+.card .has-note {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: .75;
 }
 
 .hint {
   text-align: center;
   color: var(--muted);
   font-size: 12px;
-  padding: 0 24px 24px;
+  padding: 4px 24px 8px;
+  margin: 0;
 }
 
 .backdrop {
@@ -195,7 +350,7 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  width: min(420px, 100vw);
+  width: min(460px, 100vw);
   height: 100vh;
   background: var(--panel);
   border-left: 1px solid var(--border);
@@ -207,9 +362,7 @@ body {
   overflow-y: auto;
 }
 
-.drawer.open {
-  transform: translateX(0);
-}
+.drawer.open { transform: translateX(0); }
 
 .drawer-close {
   position: absolute;
@@ -226,6 +379,22 @@ body {
   margin: 4px 30px 4px 0;
   font-size: 18px;
 }
+
+.drawer .tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: white;
+  margin-bottom: 6px;
+}
+
+.tag.deadline { background: var(--deadline); }
+.tag.internship { background: var(--internship); }
+.tag.hackathon { background: var(--hackathon); }
+.tag.scholarship { background: var(--scholarship); }
+.tag.course { background: var(--course); }
+.tag.other { background: var(--other); }
 
 .drawer .meta-row {
   font-size: 13px;
@@ -257,11 +426,64 @@ body {
   overflow-wrap: anywhere;
 }
 
+.drawer .facts dd a { color: var(--accent); overflow-wrap: anywhere; }
+
 .drawer .details-text {
   margin-top: 16px;
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+/* ---- note editor ---- */
+
+.note-box {
+  margin-top: 20px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Opened by a drop into Not interested — the reason box is the point of the
+   drawer at that moment, so it gets the accent border and the eye. */
+.note-box.prompt {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.note-box.prompt label { color: var(--accent); }
+
+.note-box label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.note-box textarea {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  padding: 8px;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.note-box textarea:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.note-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  min-height: 14px;
 }
 
 .drawer .drawer-link {
@@ -273,4 +495,15 @@ body {
   border-radius: 6px;
   text-decoration: none;
   font-size: 13px;
+}
+
+/* On a narrow screen the four columns cannot share a row; let the page scroll
+   normally there and give each column its own modest cap instead. */
+@media (max-width: 720px) {
+  body { overflow: auto; }
+  .board {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .cards { max-height: 60vh; }
 }
