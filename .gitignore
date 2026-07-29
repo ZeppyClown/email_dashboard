@@ -1,2 +1,6 @@
 .env
 *.key
+
+# Python
+__pycache__/
+*.py[cod]
