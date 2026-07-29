@@ -21,7 +21,7 @@ regardless of what is most interesting to build.
 
 | Asset | Location | State |
 |---|---|---|
-| JD markdown corpus | `resume-kit/JDs/**/*.md` | ~84 files, YAML frontmatter, hand-curated in Obsidian |
+| JD markdown corpus | `resume-kit/JDs/**/*.md` | 79 files (78 processable; 1 in `_duplicates`), YAML frontmatter, hand-curated in Obsidian |
 | Deterministic detectors | `resume-kit/scraper/job_scraper.py` | `detect_degree_gate`, `detect_grad_window`, `detect_availability`, `extract_tech_stack`, `categorize_job` |
 | Supabase helper | `email_dashboard/scripts/_common.py` | PostgREST over `requests`, secrets from `~/.hermes/.env` |
 | Triage board | `digest_items` table + static dashboard | Working; internships carry full CareerAxis payload in `meta` |
@@ -45,7 +45,7 @@ preferred skill split, and responsibilities.**
 | 3 | Markdown files authoritative for text; DB authoritative for structure | Victor edits JDs in Obsidian and `/make-resume` reads them from disk. A DB-authoritative design would clobber hand edits. DB stores a sha256 mirror so re-runs are free and off-machine agents can still read the JD. |
 | 4 | Single-shot structured output, schema-validated | Cost is negligible at this scale (~170k input tokens total), so optimise for not silently getting it wrong. A verify pass is deferred until the required/preferred split is measured as unreliable. |
 | 5 | Deterministic pre-parse for dates, salary, YOE | Regex can fail to match but cannot hallucinate. `job_scraper.py` already implements most of it. |
-| 6 | One model: `gpt-5.4-mini` | `OPENAI_API_KEY` already lives in `~/.hermes/.env` beside the Supabase keys. No second credential path, no new SDK. The cheap/expensive model split from the original plan buys nothing at 84 JDs; `extractor_version` preserves the option to route a bulk pass elsewhere later. |
+| 6 | One model: `gpt-5.4-mini` | `OPENAI_API_KEY` already lives in `~/.hermes/.env` beside the Supabase keys. No second credential path, no new SDK. The cheap/expensive model split from the original plan buys nothing at 78 JDs; `extractor_version` preserves the option to route a bulk pass elsewhere later. |
 | 7 | `extraction_status` on the row, not a log table | The question that matters is "did every JD get processed". One column answers it, and a failed job stays visible instead of silently not existing. |
 | 8 | Service-role writes only, no public read (RLS) | Unlike `digest_items`, this is not board content. `jd_markdown` mirrors scraped text and `skills` encodes Victor's own proficiency self-assessment. Locking it now costs nothing; un-publishing later is harder. |
 | 9 | Code lives in `email_dashboard/scripts/` | `resume-kit/scraper/` already re-implements the Supabase helper inline in three scripts. A fourth copy makes it worse. `email_dashboard` owns `_common.py` and `schema.sql`, and is the repo with a GitHub remote. |
@@ -116,6 +116,7 @@ table).
 | `extraction_status` | text not null default `'pending'` | check in (`pending`,`ok`,`failed`) |
 | `extraction_error` | text | truncated |
 | `digest_item_id` | text | FK → `digest_items(id)`, nullable |
+| `created_at` / `updated_at` | timestamptz | `set_updated_at()` trigger, reused from `schema.sql` |
 
 `salary_raw` is stored verbatim rather than parsed into min/max. Currencies, ranges,
 "competitive", and per-month vs per-annum are inconsistent enough across sources that
@@ -126,7 +127,6 @@ When a JD has a `board_id`, `id` and `digest_item_id` hold the same value. The c
 is kept separate because a JD scraped without ever reaching the board has a
 `sha1(apply_url)` id and a null `digest_item_id` — collapsing them would make "is this
 job on the board?" unanswerable.
-| `created_at` / `updated_at` | timestamptz | `set_updated_at()` trigger, reused from `schema.sql` |
 
 Indexes on `company`, `role_category`, `extraction_status`, `closes_at`.
 
@@ -268,7 +268,7 @@ worth building:
 - **One fixture JD** with a deliberately tricky split (`"Python required; exposure to
   Rust a plus"`) asserted against a recorded model response, so prompt changes surface
   as a diff rather than silent drift.
-- **`--dry-run` across all ~84 JDs** as the integration check.
+- **`--dry-run` across all 78 JDs** as the integration check.
 
 A `requirements.txt` (`requests`, `python-dotenv`, `openai`, `pytest`) is added as
 part of this work, since the repo currently has none.
@@ -291,7 +291,7 @@ Named explicitly so the plan does not drift into them:
 
 1. `schema_jobs.sql` runs clean in the Supabase SQL editor, and is re-runnable.
 2. All 47 taxonomy skills seeded.
-3. All ~84 JDs present in `jobs`; count of `extraction_status='failed'` is zero, or
+3. All 78 JDs present in `jobs`; count of `extraction_status='failed'` is zero, or
    each failure has a stated reason.
 4. Every job has at least one `job_requirements` row, or an explicit reason it does not.
 5. A second immediate run makes zero API calls.

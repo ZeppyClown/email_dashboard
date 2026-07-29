@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn ~84 hand-curated JD markdown files into queryable structured rows in Supabase, including the required-vs-preferred skill split that nothing currently produces.
+**Goal:** Turn 78 hand-curated JD markdown files into queryable structured rows in Supabase, including the required-vs-preferred skill split that nothing currently produces.
 
 **Architecture:** JD markdown files stay authoritative for text; Supabase owns structure. A CLI walks the JD corpus, parses frontmatter deterministically, skips unchanged files via sha256, and sends only the body to `gpt-5.4-mini` with a strict JSON schema for the fuzzy fields (skills, responsibilities, seniority). Skill phrases are stored raw plus a nullable canonical id resolved against an alias table.
 
@@ -18,7 +18,7 @@
 - **DDL:** PostgREST cannot run DDL. Every schema change goes in a `.sql` file that Victor pastes into the Supabase SQL editor. Scripts must fail with a message saying so.
 - **Idempotency:** every script is safe to re-run. Re-running with no source changes must make zero API calls and zero writes.
 - **Model:** `gpt-5.4-mini` for all LLM calls.
-- **JD corpus root:** `../resume-kit/JDs` relative to `email_dashboard/`. Skip `_duplicates/` and `_non_technical/`. **Include `_unsorted/`.**
+- **JD corpus root:** `../resume-kit/JDs` relative to `email_dashboard/`. Skip `_duplicates/` and `_non_technical/`. **Include `_unsorted/`.** Corpus is **79 files → 78 processable** (the one `_duplicates/` file is the withdrawn Tencent role). `_non_technical/` was deleted from `resume-kit` on 2026-07-29; the skip stays as a guard because the sibling `claude-resume-kit` checkout still has one.
 - **CLI convention:** every script supports `--dry-run` and prints a processed/skipped/failed summary, matching `upsert_internships.py`.
 - **Never write `digest_items.note` or `digest_items.status`.** This plan should not write `digest_items` at all.
 
@@ -1196,7 +1196,7 @@ Path('tests/fixtures/recorded_response.json').write_text(json.dumps(out, indent=
 
 Expected: Python tagged `required`, Rust tagged `preferred`. **If Rust comes back
 `required`, stop** — that is the failure mode the whole design guards against, and it
-means the prompt needs work before 84 JDs go through it.
+means the prompt needs work before 78 JDs go through it.
 
 Re-run the tests after re-recording; they must still pass.
 
@@ -1657,7 +1657,7 @@ is the pre-parse decision made concrete — deterministic first, LLM as fallback
 cd /Volumes/T9/resume/email_dashboard && python3 scripts/extract_jobs.py --dry-run
 ```
 
-Expected: `would process ~84, skipped N, failed 0`. A large `skipped` count means
+Expected: `would process 78, skipped N, failed 0`. A large `skipped` count means
 `build_job_row` is returning `None` too often — inspect before proceeding, because
 those JDs would silently never be extracted.
 
@@ -1703,7 +1703,7 @@ model only fills the gap."
 cd /Volumes/T9/resume/email_dashboard && python3 scripts/extract_jobs.py
 ```
 
-Expected: `processed ~84, skipped N, failed 0`. Any failures print their slugs;
+Expected: `processed 78, skipped N, failed 0`. Any failures print their slugs;
 re-run those individually with `--only <slug>` and record why if they persist.
 
 - [ ] **Step 2: Verify every success criterion from the spec**
@@ -1745,7 +1745,7 @@ corrupts every match score in sub-project 2.
 cd /Volumes/T9/resume/email_dashboard && time python3 scripts/extract_jobs.py
 ```
 
-Expected: `processed 0, skipped ~84, failed 0`, completing in seconds. A non-zero
+Expected: `processed 0, skipped 78, failed 0`, completing in seconds. A non-zero
 `processed` means the sha256 or `extractor_version` comparison is broken and every
 run will be paying for the whole corpus.
 
@@ -1833,7 +1833,7 @@ will need: what employers ask for that the taxonomy has no row for."
 | Deterministic pre-parse (dates, salary, YOE) | 2, 7 |
 | Reuse `job_scraper.py` detector regexes | 2 (`_YOE` ported) |
 | Single-shot `gpt-5.4-mini`, strict json_schema | 5 |
-| Pre-flight before 84 calls | 5 Step 1 |
+| Pre-flight before 78 calls | 5 Step 1 |
 | Retry once, then `extraction_status='failed'` | 5 (`extract`), 6 (`mark_failed`), 7 |
 | Row written before LLM call | 7 |
 | Alias resolution; unresolved never dropped | 6 |
@@ -1844,7 +1844,7 @@ will need: what employers ask for that the taxonomy has no row for."
 | `requirements.txt` created | 1 |
 | Unit tests on pure functions | 2, 4, 6 |
 | Fixture JD with tricky required/preferred split | 2, 5 |
-| `--dry-run` over all 84 as integration check | 7 Step 2, 8 |
+| `--dry-run` over all 78 as integration check | 7 Step 2, 8 |
 | All six success criteria | 8 Step 2–4 |
 
 No gaps.
