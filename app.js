@@ -23,6 +23,7 @@ let activeCategory = "all";
 let query = "";
 let hideExpired = true;
 let teamSize = "";
+let activeRole = "";
 // Which urgency groups are folded away. Shared across the four columns on
 // purpose — "Later" means the same thing in each, and per-column state would
 // mean twelve toggles to manage a board you only triage one way.
@@ -39,6 +40,8 @@ const searchEl = document.getElementById("search");
 const hideExpiredEl = document.getElementById("hideExpired");
 const teamSizeEl = document.getElementById("teamSize");
 const teamSizeWrapEl = document.getElementById("teamSizeWrap");
+const roleEl = document.getElementById("role");
+const roleWrapEl = document.getElementById("roleWrap");
 const countEl = document.getElementById("count");
 
 const COLLAPSE_KEY = "hermes.collapsedGroups";
@@ -110,6 +113,19 @@ function matchesTeamSize(item) {
   return n >= min && n <= max;
 }
 
+function roleOf(item) {
+  return item.meta?.["Role Category"] || "";
+}
+
+function matchesRole(item) {
+  if (!activeRole) return true;
+  // "(unsorted)" is its own choice rather than a hidden default: a card the
+  // classifier could not place is a real state worth being able to look at,
+  // and lumping it into "any" would make it invisible.
+  if (activeRole === "_none") return !roleOf(item);
+  return roleOf(item) === activeRole;
+}
+
 function matchesQuery(item) {
   if (!query) return true;
   const haystack = [
@@ -132,7 +148,40 @@ function visible(item) {
   if (hideExpired && item.deadline_date && item.deadline_date < todayISO()) return false;
   if (!matchesQuery(item)) return false;
   if (activeCategory === "hackathon" && !matchesTeamSize(item)) return false;
+  if (activeCategory === "internship" && !matchesRole(item)) return false;
   return true;
+}
+
+// Built from the data, not a hardcoded list: the classifier's categories will
+// grow, and a stale constant here would silently hide whole roles.
+function renderRoleOptions() {
+  const internships = items.filter((i) => i.category === "internship");
+  const counts = new Map();
+  for (const i of internships) {
+    const r = roleOf(i) || "_none";
+    counts.set(r, (counts.get(r) || 0) + 1);
+  }
+
+  const named = [...counts.entries()]
+    .filter(([r]) => r !== "_none")
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const unsorted = counts.get("_none") || 0;
+
+  const prev = activeRole;
+  roleEl.innerHTML = "";
+  const opts = [["", `any (${internships.length})`]];
+  for (const [role, n] of named) opts.push([role, `${role} (${n})`]);
+  if (unsorted) opts.push(["_none", `unsorted (${unsorted})`]);
+
+  for (const [value, label] of opts) {
+    const o = document.createElement("option");
+    o.value = value;
+    o.textContent = label;
+    roleEl.appendChild(o);
+  }
+  // Keep the selection across re-renders, but drop it if the role vanished.
+  roleEl.value = opts.some(([v]) => v === prev) ? prev : "";
+  activeRole = roleEl.value;
 }
 
 // ---- chrome -------------------------------------------------------------
@@ -153,11 +202,15 @@ function renderFilters() {
       activeCategory = cat;
       teamSizeWrapEl.hidden = cat !== "hackathon";
       if (cat !== "hackathon") { teamSize = ""; teamSizeEl.value = ""; }
+      roleWrapEl.hidden = cat !== "internship";
+      if (cat !== "internship") { activeRole = ""; roleEl.value = ""; }
       renderFilters();
       renderBoard();
     };
     filtersEl.appendChild(chip);
   }
+  // Rebuilt alongside the chips so the counts can never drift from the board.
+  renderRoleOptions();
 }
 
 function renderAuth() {
@@ -215,6 +268,108 @@ const FIELD_ORDER = [
 // screen, since "Team size" already says "Teams of 3–5" in the organiser's
 // own words right above them.
 const HIDDEN_META = new Set(["Team min", "Team max"]);
+
+// `resume` is written by resume-kit's scraper/sync_resume_packages.py and is
+// read-only here — the kit is the source of truth for what you'd send, the
+// same way CareerAxis is the source of truth for the posting. Shape:
+//   { status, lead, framing, match:{direct,bridge,gap},
+//     bullets:[{id,position,text,why}], files:{cv,cover_letter}, package }
+const RESUME_STATUS = {
+  researching: ["Researching", "Phase 0 — JD analysed, bullets not chosen yet"],
+  planned:     ["Bullets planned", "Phase 1 — plan locked, document not generated"],
+  generated:   ["Package ready", "Resume and cover letter written"],
+  sent:        ["Applied", "Package sent"],
+};
+
+function resumePanel(item) {
+  const r = item.resume;
+  if (!r) return null;
+
+  const wrap = document.createElement("section");
+  wrap.className = "resume-panel";
+
+  const [label, hint] = RESUME_STATUS[r.status] || ["Unknown", ""];
+  const head = document.createElement("div");
+  head.className = "resume-head";
+  head.innerHTML = `<h4>Your resume for this role</h4>
+    <span class="resume-status s-${r.status}">${label}</span>`;
+  wrap.appendChild(head);
+
+  if (hint) {
+    const h = document.createElement("p");
+    h.className = "resume-hint";
+    h.textContent = hint;
+    wrap.appendChild(h);
+  }
+
+  if (r.lead) {
+    const lead = document.createElement("blockquote");
+    lead.className = "resume-lead";
+    lead.textContent = r.lead;
+    wrap.appendChild(lead);
+  }
+
+  const m = r.match || {};
+  if (m.direct || m.bridge || m.gap) {
+    const total = (m.direct || 0) + (m.bridge || 0) + (m.gap || 0);
+    const bar = document.createElement("div");
+    bar.className = "resume-match";
+    bar.innerHTML =
+      `<div class="match-bar" role="img" aria-label="${m.direct||0} direct, ${m.bridge||0} bridged, ${m.gap||0} gaps">
+         <i class="d" style="width:${(m.direct||0)/total*100}%"></i>
+         <i class="b" style="width:${(m.bridge||0)/total*100}%"></i>
+         <i class="g" style="width:${(m.gap||0)/total*100}%"></i>
+       </div>
+       <div class="match-key"><b>${m.direct||0}</b> direct ·
+         <b>${m.bridge||0}</b> bridged · <b>${m.gap||0}</b> gap</div>`;
+    wrap.appendChild(bar);
+  }
+
+  // Group bullets under their position so the panel reads like the resume
+  // itself rather than a flat list of achievement ids.
+  const byPosition = new Map();
+  for (const b of r.bullets || []) {
+    if (!byPosition.has(b.position)) byPosition.set(b.position, []);
+    byPosition.get(b.position).push(b);
+  }
+  for (const [position, bullets] of byPosition) {
+    const h = document.createElement("div");
+    h.className = "resume-position";
+    h.textContent = position || "Other";
+    wrap.appendChild(h);
+
+    const ul = document.createElement("ul");
+    ul.className = "resume-bullets";
+    for (const b of bullets) {
+      const li = document.createElement("li");
+      const id = document.createElement("code");
+      id.textContent = b.id;
+      li.appendChild(id);
+      li.appendChild(document.createTextNode(" " + b.text));
+      if (b.why) {
+        const why = document.createElement("span");
+        why.className = "resume-why";
+        why.textContent = b.why;
+        li.appendChild(why);
+      }
+      ul.appendChild(li);
+    }
+    wrap.appendChild(ul);
+  }
+
+  // Local paths, not links — these files live in the private resume-kit repo
+  // and a browser cannot open them. Showing the path is what's useful.
+  const files = Object.entries(r.files || {});
+  if (files.length || r.package) {
+    const f = document.createElement("div");
+    f.className = "resume-files";
+    f.innerHTML = files.length
+      ? files.map(([k, v]) => `<code>${v}</code>`).join("")
+      : `<code>${r.package}/</code>`;
+    wrap.appendChild(f);
+  }
+  return wrap;
+}
 
 function openDrawer(item, { focusNote = false } = {}) {
   drawerContentEl.innerHTML = "";
@@ -279,6 +434,8 @@ function openDrawer(item, { focusNote = false } = {}) {
   if (item.sender) drawerContentEl.appendChild(senderRow);
   drawerContentEl.appendChild(dateRow);
   if (facts.childElementCount) drawerContentEl.appendChild(facts);
+  const resume = resumePanel(item);
+  if (resume) drawerContentEl.appendChild(resume);
   drawerContentEl.appendChild(body);
   const note = noteBox(item, focusNote);
   drawerContentEl.appendChild(note);
@@ -565,6 +722,10 @@ function wireControls() {
   });
   teamSizeEl.addEventListener("change", () => {
     teamSize = teamSizeEl.value;
+    renderBoard();
+  });
+  roleEl.addEventListener("change", () => {
+    activeRole = roleEl.value;
     renderBoard();
   });
 }

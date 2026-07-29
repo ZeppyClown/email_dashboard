@@ -27,6 +27,15 @@
       <option value="6">6</option>
     </select>
   </label>
+  <!-- Same treatment as team size: only meaningful while the internship pill
+       is active. A dropdown rather than chips because there are 17 roles —
+       that many pills wrap onto three lines and bury the category filter. -->
+  <label class="toggle" id="roleWrap" hidden>
+    Role
+    <select id="role">
+      <option value="">any</option>
+    </select>
+  </label>
   <span class="count" id="count"></span>
 </div>
 
