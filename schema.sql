@@ -43,6 +43,16 @@ alter table digest_items add column if not exists meta jsonb;
 alter table digest_items add column if not exists source text;
 alter table digest_items add column if not exists note text;
 
+-- The tailored resume for this specific role, synced from the resume-kit repo
+-- by scraper/sync_resume_packages.py. Kept out of `meta` on purpose: meta is a
+-- flat facts table rendered above the description, and a bullet plan is
+-- neither flat nor a fact. Shape:
+--   { status, framing, lead, match:{direct,bridge,gap},
+--     bullets:[{id,position,text,why}], files:{cv,cover_letter}, updated }
+-- Read-only from the browser — the kit is the source of truth, so the
+-- client grants below deliberately do not include it.
+alter table digest_items add column if not exists resume jsonb;
+
 -- The category list is a CHECK, so widening it means replacing the constraint —
 -- `create table if not exists` will not do it on a board that already exists.
 alter table digest_items drop constraint if exists digest_items_category_check;
