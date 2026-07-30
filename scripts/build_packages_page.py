@@ -442,6 +442,9 @@ def render(packages: list[dict]) -> str:
         "<a href='index.html'>Digest board</a>"
         "<a class='here' href='packages.html'>Resume packages</a>"
         "<span class='caps'>"
+        # So "is what I am looking at the version I just pushed?" is answerable
+        # by looking, instead of by guessing about caches.
+        f"<span class='cap' title='page build time'>built {datetime.now():%b %d %H:%M}</span>"
         "<button class='btn' id='grant' hidden>Connect output folder</button>"
         "<span class='cap' id='capFs'></span><span class='cap' id='capSrv'></span>"
         "</span></div>"
