@@ -306,6 +306,14 @@ async function api(path,opts){
    so when it is up the folder grant is pure ceremony. */
 const target = () => dirRoot ? 'folder' : live ? 'server' : FS_OK ? 'ask' : 'none';
 
+/* packages/ holds a snapshot taken by build_packages_page.py, which is all the
+   published site has. Locally the server can reach the real file, and that is
+   the one that changes when you compile — so prefer it, or the preview quietly
+   keeps showing a PDF from whenever the page was last generated. */
+const pdfUrl = d => !d.pdf ? ''
+  : live ? '/resume-kit/output/' + d.pkg + '/' + d.tex.replace(/\.tex$/, '.pdf')
+         : d.pdf;
+
 function marks(){
   capFs.className='cap'+(dirRoot?' on':'');
   capFs.textContent=dirRoot?'folder connected':(FS_OK?'folder not connected':'no folder API');
@@ -340,7 +348,7 @@ async function select(btn, keep){
   title.textContent=d.tex;
   meta.textContent=d.kind+' · '+d.pkg+(d.pages?' · '+d.pages+'p':'')+(d.built?' · built '+d.built:'');
   stale.hidden=!d.stale;
-  frame.src = d.pdf ? d.pdf+'?t='+Date.now() : 'about:blank';
+  frame.src = d.pdf ? pdfUrl(d)+'?t='+Date.now() : 'about:blank';
   if(!keep) say('');
 
   // Prefer the file on disk; the embedded copy is only a fallback.
@@ -375,14 +383,16 @@ async function save(){
     if(t==='folder'){
       const w=await (await handleFor(cur,true)).createWritable();
       await w.write(text); await w.close();
-      saved=text; setState(); say('Saved '+cur.tex+' to the file.','good');
+      saved=text; stale.hidden=false; setState();
+      say('Saved '+cur.tex+'. The PDF is unchanged until you compile.','good');
       return true;
     }
     if(t==='server'){
       await api('/api/tex',{method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({path:cur.pkg+'/'+cur.tex,text})});
-      saved=text; setState(); say('Saved '+cur.tex+' via the local server.','good');
+      saved=text; stale.hidden=false; setState();
+      say('Saved '+cur.tex+' via the server. The PDF is unchanged until you compile.','good');
       return true;
     }
     download(); return false;         // nothing wrote to disk, so not "saved"
@@ -400,7 +410,7 @@ async function compile(){
         r.ok?'good':'bad');
     if(r.ok){
       // The server rewrote resume-kit/output; this page serves its own copy.
-      frame.src='/resume-kit/output/'+cur.pkg+'/'+cur.tex.replace(/\.tex$/,'.pdf')+'?t='+Date.now();
+      frame.src=pdfUrl(cur)+'?t='+Date.now();
       stale.hidden=true;
       const b=document.querySelector('.doc[aria-current="true"] .badge'); if(b) b.remove();
       say(log.textContent+'\n\nRerun build_packages_page.py to refresh the stored copy.',
@@ -493,8 +503,8 @@ def render(packages: list[dict]) -> str:
         "<div class='log' id='log'></div></div>"
         "<div class='pane pdf show'><div class='head'><h3>PDF</h3>"
         "<span class='meta'>rendered output</span></div>"
-        "<div class='stalebar' id='stale' hidden>The .tex changed after this PDF "
-        "was built — press Compile.</div>"
+        "<div class='stalebar' id='stale' hidden>The .tex has changed since this PDF "
+        "was built — press Compile to update it.</div>"
         "<iframe id='frame' title='PDF preview'></iframe></div>"
         "</div>"
         f"<script type='application/json' id='data'>{data}</script>"
