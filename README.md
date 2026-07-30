@@ -154,6 +154,29 @@ full resume PDFs and the list of live applications are publicly downloadable.
 That is deliberate (decided 2026-07-30), not an oversight. Re-run the generator
 and commit after each compile, or the published copy goes stale.
 
+## Sign-in gate
+
+`auth-gate.js` + `auth-gate.css` hide both pages behind Google sign-in and admit
+only the address in `ALLOWED`. The stylesheet is linked before the body so the UI
+never flashes up before the check runs; a wrong account is told so and offered a
+switch.
+
+Add both redirect URLs in Supabase -> Authentication -> URL Configuration:
+
+```
+https://zeppyclown.github.io/email_dashboard/
+http://localhost:8765/email_dashboard/
+```
+
+**This gates the interface, not the data.** These are static files, so anyone can
+still fetch `packages/<Pkg>/<file>.pdf`, `packages.html` or `app.js` directly
+without ever running the gate, and board rows stay readable with the anon key
+because `schema.sql` grants public select. What *is* enforced is writing: the RLS
+policy checks the JWT email server-side.
+
+To actually make the resume PDFs private, stop publishing them: drop `packages/`
+and `packages.html` from the repo and use the local page only.
+
 ## Board mechanics
 
 - Reading the board requires no login (public data, per RLS in `schema.sql`).

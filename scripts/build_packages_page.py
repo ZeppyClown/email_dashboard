@@ -628,7 +628,13 @@ def render(packages: list[dict]) -> str:
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<title>Resume Packages — Hermes</title>"
-        f"<style>{CSS}</style></head><body>"
+        f"<style>{CSS}</style>"
+        # Same gate as the board. The stylesheet must land before the body
+        # so nothing flashes into view ahead of the auth check.
+        "<link rel='stylesheet' href='auth-gate.css'>"
+        "</head><body>"
+        "<div id='authgate' hidden></div>"
+        "<script type='module' src='auth-gate.js'></script>"
         "<div class='topbar'><h1>Hermes</h1>"
         "<a href='index.html'>Digest board</a>"
         "<a class='here' href='packages.html'>Resume packages</a>"
