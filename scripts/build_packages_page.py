@@ -189,9 +189,17 @@ background:var(--panel);color:var(--text);font-size:12px;cursor:pointer}
 .btn:disabled{opacity:.45;cursor:default}
 .spacer{margin-left:auto}
 .dirty{color:var(--warn)}
-textarea{flex:1;width:100%;resize:none;border:none;outline:none;padding:12px;
-font-family:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
-line-height:1.55;tab-size:2;background:var(--bg);color:var(--text);white-space:pre}
+.cm{flex:1;min-height:0;overflow:hidden;background:var(--bg)}
+.cm .cm-editor{height:100%}
+.cm .cm-gutters{color:var(--muted)}
+.cm .cm-activeLine{background:rgba(127,127,127,.07)}
+.cm .cm-activeLineGutter{background:transparent;color:var(--text)}
+.cm .cm-cursor{border-left-color:var(--text)}
+.cm .cm-selectionBackground,.cm .cm-content ::selection{background:rgba(47,111,237,.22)!important}
+.cm .cm-searchMatch{background:rgba(235,87,87,.25)}
+.auto{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);
+cursor:pointer;user-select:none}
+.auto input{margin:0}
 iframe{flex:1;width:100%;border:none;background:#fff}
 .log{flex:none;max-height:150px;overflow:auto;padding:8px 12px;
 border-top:1px solid var(--border);font-family:"SF Mono",Menlo,monospace;
@@ -207,13 +215,40 @@ color:var(--muted);font-size:13px;padding:20px;text-align:center}
 JS = r"""
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const $ = id => document.getElementById(id);
-const ed=$('ed'), frame=$('frame'), log=$('log'), state=$('state'),
+const frame=$('frame'), log=$('log'), state=$('state'),
       title=$('title'), meta=$('meta'), stale=$('stale'),
       saveB=$('save'), compB=$('compile'), grantB=$('grant'),
-      capFs=$('capFs'), capSrv=$('capSrv');
+      capFs=$('capFs'), capSrv=$('capSrv'), autoBox=$('auto');
 
-let cur=null, saved='', dirRoot=null, live=false;
-const dirty = () => cur && ed.value !== saved;
+let cur=null, saved='', dirRoot=null, live=false, autoTimer=null;
+
+/* CodeMirror 6 — the editor core Overleaf is built on. Falls back to a plain
+   textarea if the vendored bundle is missing, so the page never dies on it. */
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+const ed = (() => {
+  const host = $('ed');
+  if (window.CMEditor) {
+    const cm = CMEditor.create({parent: host, doc: '', dark, onChange: changed});
+    return {get: () => cm.getValue(), set: t => cm.setValue(t), focus: () => cm.focus()};
+  }
+  host.innerHTML = "<textarea id='fallback' spellcheck='false' style='width:100%;"
+    + "height:100%;border:none;outline:none;padding:12px;background:var(--bg);"
+    + "color:var(--text);font:12px/1.55 Menlo,monospace'></textarea>";
+  const ta = $('fallback');
+  ta.addEventListener('input', changed);
+  return {get: () => ta.value, set: t => { ta.value = t; }, focus: () => ta.focus()};
+})();
+
+const dirty = () => cur && ed.get() !== saved;
+
+function changed(){
+  setState();
+  // Overleaf's habit: recompile once you pause. Off by default, because each
+  // run writes the .tex to disk before compiling.
+  if(!autoBox.checked || !live || !cur) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => { if(dirty()) compile(); }, 1500);
+}
 
 /* ---------- capability 2: File System Access ---------- */
 const FS_OK = 'showDirectoryPicker' in window;
@@ -281,10 +316,7 @@ function marks(){
 }
 function setState(){
   const t=target();
-  // Always typeable. Nothing is lost by letting someone edit a buffer, and
-  // making them hunt for a permission button before they can fix a word is
-  // the opposite of editing on the fly.
-  ed.readOnly=false;
+  // Always typeable; the editor never gates on a permission click.
   state.textContent = !cur ? ''
     : dirty() ? 'unsaved'
     : t==='folder' ? 'saves to the file'
@@ -312,9 +344,9 @@ async function select(btn, keep){
   if(!keep) say('');
 
   // Prefer the file on disk; the embedded copy is only a fallback.
-  ed.value = saved = d.source;
+  ed.set(saved = d.source);
   if(dirRoot){
-    try{ const fh=await handleFor(d); ed.value = saved = await (await fh.getFile()).text(); }
+    try{ const fh=await handleFor(d); ed.set(saved = await (await fh.getFile()).text()); }
     catch(e){ say('Showing the embedded copy — could not read '+d.tex+' from the folder ('+e.message+').'); }
   }
   setState();
@@ -322,7 +354,7 @@ async function select(btn, keep){
 
 function download(){
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/x-tex'}));
+  a.href=URL.createObjectURL(new Blob([ed.get()],{type:'text/x-tex'}));
   a.download=cur.tex; a.click(); URL.revokeObjectURL(a.href);
   say('Downloaded '+cur.tex+' — this browser cannot write files in place, so '
      +'copy it over '+cur.pkg+'/'+cur.tex+' yourself.');
@@ -330,7 +362,7 @@ function download(){
 
 async function save(){
   if(!cur||!dirty()) return true;
-  const text=ed.value;
+  const text=ed.get();
   let t=target();
 
   if(t==='ask'){                      // first save doubles as the folder prompt
@@ -378,7 +410,6 @@ async function compile(){
   setState();
 }
 
-ed.addEventListener('input',setState);
 saveB.addEventListener('click',save);
 compB.addEventListener('click',compile);
 grantB.addEventListener('click',grant);
@@ -453,9 +484,12 @@ def render(packages: list[dict]) -> str:
         "<div class='pane'><div class='head'><h3 id='title'>—</h3>"
         "<span class='meta' id='meta'></span><span class='spacer'></span>"
         "<span class='meta' id='state'></span>"
+        "<label class='auto' title='Recompile a moment after you stop typing. "
+        "Each run saves the .tex first.'>"
+        "<input type='checkbox' id='auto'>auto</label>"
         "<button class='btn' id='save' disabled>Save</button>"
         "<button class='btn primary' id='compile' disabled>Compile</button>"
-        "</div><textarea id='ed' spellcheck='false'></textarea>"
+        "</div><div class='cm' id='ed'></div>"
         "<div class='log' id='log'></div></div>"
         "<div class='pane pdf show'><div class='head'><h3>PDF</h3>"
         "<span class='meta'>rendered output</span></div>"
@@ -464,6 +498,7 @@ def render(packages: list[dict]) -> str:
         "<iframe id='frame' title='PDF preview'></iframe></div>"
         "</div>"
         f"<script type='application/json' id='data'>{data}</script>"
+        "<script src='vendor/editor.js'></script>"
         f"<script>{JS}</script></body></html>"
     )
 

@@ -49,7 +49,23 @@ That copies each PDF and a first-page thumbnail into `packages/` and embeds the
 `.tex` source in the page. Rerun it whenever a package is added or recompiled
 outside the page.
 
-### Editing
+### The editor
+
+`vendor/editor.js` is a committed **CodeMirror 6** bundle — the same editor
+core Overleaf uses, MIT licensed. It gives LaTeX syntax highlighting, line
+numbers, code folding, bracket matching, undo history, and Cmd-F search. If the
+bundle is missing the page falls back to a plain textarea rather than breaking.
+See `vendor/README.md` to rebuild it.
+
+Tick **auto** in the editor header for Overleaf-style recompile-on-pause: about
+a second and a half after you stop typing, it saves and compiles. It is off by
+default because every run writes the `.tex` to disk, and it needs the local
+server since only that can run `tectonic`.
+
+Overleaf itself is not vendored — it is AGPL-3.0 and needs MongoDB and Redis.
+Only the shared open-source editor foundation is used here.
+
+### Saving
 
 **The editor is always typeable.** There is no mode to switch on. Change a
 bullet you do not like and press Cmd-S; the status beside the buttons always
