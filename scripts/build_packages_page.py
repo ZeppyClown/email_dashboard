@@ -152,10 +152,19 @@ border:1px solid var(--border);border-radius:999px;background:var(--panel)}
 color:var(--muted)}
 .cap.on{border-color:var(--ok);color:var(--ok)}
 
-.main{flex:1;display:grid;grid-template-columns:250px minmax(0,1fr) minmax(0,1fr);
-min-height:0}
+.main{flex:1;display:grid;min-height:0;
+grid-template-columns:var(--c1,250px) 6px var(--c2,480px) 6px minmax(0,1fr)}
+/* Drag handles. ::after widens the grab area without widening the line. */
+.gutter{cursor:col-resize;background:var(--border);position:relative;
+touch-action:none;transition:background .12s}
+.gutter::after{content:'';position:absolute;top:0;bottom:0;left:-4px;right:-4px}
+.gutter:hover,.gutter.drag{background:var(--accent)}
+body.resizing{cursor:col-resize;user-select:none}
+/* An iframe swallows pointer events, so the drag dies the moment the cursor
+   crosses the PDF. Disable it for the duration. */
+body.resizing iframe{pointer-events:none}
 @media (max-width:1150px){.main{grid-template-columns:220px minmax(0,1fr)}
-.pane.pdf{display:none}.pane.pdf.show{display:flex;grid-column:2}}
+.gutter{display:none}.pane.pdf{display:none}.pane.pdf.show{display:flex}}
 
 /* --- sidebar --- */
 .side{border-right:1px solid var(--border);overflow-y:auto;padding:10px}
@@ -495,6 +504,69 @@ async function compile(){
   setState();
 }
 
+/* ---------- resizable columns ---------- */
+const GUTTER=6, MIN_SIDE=170, MIN_EDIT=260, MIN_PDF=260, WKEY='pkgcols';
+const main=document.querySelector('.main');
+
+const applyCols=(c1,c2)=>{
+  main.style.setProperty('--c1',c1+'px');
+  main.style.setProperty('--c2',c2+'px');
+};
+const readCols=()=>{
+  const cs=getComputedStyle(main);
+  return [parseFloat(cs.getPropertyValue('--c1'))||250,
+          parseFloat(cs.getPropertyValue('--c2'))||480];
+};
+function clampCols(c1,c2){
+  const total=main.clientWidth-GUTTER*2;
+  c1=Math.max(MIN_SIDE,Math.min(c1,total-MIN_EDIT-MIN_PDF));
+  c2=Math.max(MIN_EDIT,Math.min(c2,total-c1-MIN_PDF));
+  return [c1,c2];
+}
+const saveCols=(c1,c2)=>{ try{ localStorage.setItem(WKEY,JSON.stringify([c1,c2])); }catch(e){} };
+
+function drag(g,which){
+  g.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    g.setPointerCapture(e.pointerId);
+    g.classList.add('drag'); document.body.classList.add('resizing');
+    const left=main.getBoundingClientRect().left;
+    const move=ev=>{
+      let [c1,c2]=readCols();
+      const x=ev.clientX-left;
+      if(which===1) c1=x; else c2=x-c1-GUTTER;
+      [c1,c2]=clampCols(c1,c2);
+      applyCols(c1,c2);
+    };
+    const up=()=>{
+      g.classList.remove('drag'); document.body.classList.remove('resizing');
+      g.removeEventListener('pointermove',move);
+      g.removeEventListener('pointerup',up);
+      g.removeEventListener('pointercancel',up);
+      saveCols(...readCols());
+    };
+    g.addEventListener('pointermove',move);
+    g.addEventListener('pointerup',up);
+    g.addEventListener('pointercancel',up);
+  });
+  g.addEventListener('dblclick',()=>{          // reset this handle
+    let [c1,c2]=readCols();
+    if(which===1) c1=250; else c2=(main.clientWidth-c1-GUTTER*2)/2;
+    [c1,c2]=clampCols(c1,c2); applyCols(c1,c2); saveCols(c1,c2);
+  });
+}
+
+(function initCols(){
+  let stored=null;
+  try{ stored=JSON.parse(localStorage.getItem(WKEY)||'null'); }catch(e){}
+  const total=main.clientWidth-GUTTER*2;
+  let [c1,c2]=Array.isArray(stored)?stored:[250,(total-250)/2];
+  [c1,c2]=clampCols(c1,c2); applyCols(c1,c2);
+  drag($('g1'),1); drag($('g2'),2);
+  // Stop the PDF pane being squeezed out when the window narrows.
+  addEventListener('resize',()=>applyCols(...clampCols(...readCols())));
+})();
+
 saveB.addEventListener('click',()=>(live||ENDPOINT)?compile():save());
 compB.addEventListener('click',compile);
 grantB.addEventListener('click',grant);
@@ -571,6 +643,7 @@ def render(packages: list[dict]) -> str:
         "</span></div>"
         "<div class='main'>"
         f"<div class='side'>{''.join(side)}</div>"
+        "<div class='gutter' id='g1' title='Drag to resize, double-click to reset'></div>"
         "<div class='pane'><div class='head'><h3 id='title'>—</h3>"
         "<span class='meta' id='meta'></span><span class='spacer'></span>"
         "<span class='meta' id='state'></span>"
@@ -581,6 +654,7 @@ def render(packages: list[dict]) -> str:
         "<button class='btn primary' id='compile' disabled>Compile</button>"
         "</div><div class='cm' id='ed'></div>"
         "<div class='log' id='log'></div></div>"
+        "<div class='gutter' id='g2' title='Drag to resize, double-click to reset'></div>"
         "<div class='pane pdf show'><div class='head'><h3>PDF</h3>"
         "<span class='meta'>rendered output</span></div>"
         "<div class='stalebar' id='stale' hidden></div>"
