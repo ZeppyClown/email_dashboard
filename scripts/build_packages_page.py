@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import shutil
 from datetime import datetime
@@ -40,6 +41,12 @@ ASSETS = DASHBOARD / "packages"
 PAGE = DASHBOARD / "packages.html"
 
 THUMB_DPI = 30          # sidebar icon only; the preview is the real PDF
+
+# A hosted compiler (see ../latex-compile-space) lets the published page
+# compile with nothing running locally. Baked in at build time:
+#   COMPILE_ENDPOINT=https://... python3 scripts/build_packages_page.py
+COMPILE_ENDPOINT = os.environ.get("COMPILE_ENDPOINT", "").rstrip("/")
+TEMPLATE_CLS = ROOT / "resume-kit" / "resume_builder" / "templates" / "resume.cls"
 SKIP = {"resume.cls", "cv.cls"}
 
 
@@ -213,7 +220,8 @@ color:var(--muted);font-size:13px;padding:20px;text-align:center}
 """
 
 JS = r"""
-const DATA = JSON.parse(document.getElementById('data').textContent);
+const BUNDLE = JSON.parse(document.getElementById('data').textContent);
+const DATA = BUNDLE.docs, CLS = BUNDLE.cls, ENDPOINT = BUNDLE.endpoint;
 const $ = id => document.getElementById(id);
 const frame=$('frame'), log=$('log'), state=$('state'),
       title=$('title'), meta=$('meta'), stale=$('stale'),
@@ -245,7 +253,7 @@ function changed(){
   setState();
   // Overleaf's habit: recompile once you pause. Off by default, because each
   // run writes the .tex to disk before compiling.
-  if(!autoBox.checked || !live || !cur) return;
+  if(!autoBox.checked || (!live && !ENDPOINT) || !cur) return;
   clearTimeout(autoTimer);
   autoTimer = setTimeout(() => { if(dirty()) compile(); }, 1500);
 }
@@ -317,13 +325,13 @@ const pdfUrl = d => !d.pdf ? ''
 function marks(){
   capFs.className='cap'+(dirRoot?' on':'');
   capFs.textContent=dirRoot?'folder connected':(FS_OK?'folder not connected':'no folder API');
-  capSrv.className='cap'+(live?' on':'');
-  capSrv.textContent=live?'compiler ready':'compiler offline';
+  capSrv.className='cap'+((live||ENDPOINT)?' on':'');
+  capSrv.textContent=live?'compiler: local':ENDPOINT?'compiler: hosted':'compiler offline';
   grantB.hidden=!FS_OK||!!dirRoot;
   setState();
 }
 function staleText(){
-  stale.textContent = live
+  stale.textContent = (live||ENDPOINT)
     ? 'The .tex has changed since this PDF was built — press Compile to update it.'
     : 'The .tex has changed since this PDF was built. Compiling needs the local '
       + 'server: run scripts/packages_server.py and open localhost:8765.';
@@ -334,6 +342,7 @@ function setState(){
   staleText();
   // A disabled button with no explanation is the same as a broken one.
   compB.title = !cur ? '' : live ? 'Save and run tectonic (Cmd-Enter)'
+    : ENDPOINT ? 'Compile on the hosted service (Cmd-Enter)'
     : 'No compiler reachable. tectonic cannot run in a browser — start '
       + 'scripts/packages_server.py and use localhost:8765.';
   // Always typeable; the editor never gates on a permission click.
@@ -345,10 +354,11 @@ function setState(){
     : 'no save target — download only';
   state.className = dirty() ? 'meta dirty' : 'meta';
   saveB.disabled=!dirty();
-  saveB.textContent = t==='none' ? 'Download' : live ? 'Save & compile' : 'Save';
+  saveB.textContent = t==='none' ? 'Download'
+    : (live||ENDPOINT) ? 'Save & compile' : 'Save';
   saveB.title = live ? 'Write the .tex and rebuild the PDF (Cmd-S)'
     : 'Write the .tex. No compiler reachable, so the PDF will not change.';
-  compB.disabled=!live||!cur;
+  compB.disabled=(!live && !ENDPOINT)||!cur;
 }
 function say(m,k){ log.textContent=m||''; log.className='log'+(k?' '+k:''); }
 
@@ -413,7 +423,33 @@ async function save(){
   }catch(e){ say('Save failed: '+e.message,'bad'); return false; }
 }
 
+async function hostedCompile(){
+  // No local server: send the source out and get PDF bytes back. Nothing is
+  // written to disk, so the preview is a blob and the stale flag stays set.
+  say('Compiling on the hosted service…');
+  const r=await fetch(ENDPOINT+'/compile',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tex:ed.get(),cls:CLS,cls_name:'resume.cls'})});
+  const ctype=r.headers.get('content-type')||'';
+  if(!r.ok){
+    let d={}; try{ d=await r.json(); }catch(e){}
+    say('Compile refused ('+r.status+'): '+(d.detail||d.error||'unknown'),'bad');
+    return;
+  }
+  if(!ctype.includes('application/pdf')){
+    const d=await r.json().catch(()=>({}));
+    say('Compile FAILED.\n\n'+(d.log||'no log'),'bad');
+    return;
+  }
+  const url=URL.createObjectURL(await r.blob());
+  if(frame.dataset.blob) URL.revokeObjectURL(frame.dataset.blob);
+  frame.dataset.blob=url; frame.src=url;
+  say('Compiled on the hosted service. This preview is not saved to disk — '
+     +'the stored PDF still needs a local compile.','good');
+}
+
 async function compile(){
+  if(!live && ENDPOINT){ await save(); return hostedCompile(); }
   if(!await save()) return;
   compB.disabled=true; say('Compiling…');
   try{
@@ -434,11 +470,11 @@ async function compile(){
   setState();
 }
 
-saveB.addEventListener('click',()=>live?compile():save());
+saveB.addEventListener('click',()=>(live||ENDPOINT)?compile():save());
 compB.addEventListener('click',compile);
 grantB.addEventListener('click',grant);
 document.addEventListener('keydown',e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();live?compile():save();}
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();(live||ENDPOINT)?compile():save();}
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();if(!compB.disabled)compile();}
 });
 addEventListener('beforeunload',e=>{if(dirty())e.preventDefault();});
@@ -487,7 +523,10 @@ def render(packages: list[dict]) -> str:
     if not flat:
         side.append("<p class='blank'>No compiled packages in resume-kit/output.</p>")
 
-    data = json.dumps(flat).replace("</", "<\\/")
+    cls = TEMPLATE_CLS.read_text(encoding="utf-8", errors="replace") \
+        if TEMPLATE_CLS.is_file() else ""
+    payload = {"docs": flat, "cls": cls, "endpoint": COMPILE_ENDPOINT}
+    data = json.dumps(payload).replace("</", "<\\/")
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"

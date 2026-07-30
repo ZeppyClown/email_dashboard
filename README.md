@@ -66,10 +66,32 @@ continuously and a compile request rebuilds the PDF.
 Tick **auto** for recompile-on-pause — roughly a second and a half after you
 stop typing. Off by default because every run writes to disk.
 
-Compiling always needs the local server. Overleaf looks like it compiles in the
-browser but does not: it ships the document to their CLSI service, runs LaTeX in
-a container there, and returns a PDF. Same shape as `packages_server.py`, just
-their hardware.
+### Compiling
+
+A browser cannot run `tectonic` — it is a native binary, and page JavaScript is
+not allowed to start processes. So a compile always goes to something outside
+the browser. There are two options, and the page uses whichever it finds:
+
+| Route | Where | Notes |
+|---|---|---|
+| **Local** `packages_server.py` | your Mac | Writes the PDF next to the `.tex`, runs the char-count gate. Nothing leaves the machine. |
+| **Hosted** `../latex-compile-space` | a free HF Space | Stateless: sends the source, gets PDF bytes back. Works on the published site. The preview is a blob, so the *stored* PDF still needs a local compile. |
+
+The `compiler:` pill in the top right says which is active.
+
+To use the hosted one, deploy `../latex-compile-space` (its README has the
+steps), then bake the URL in:
+
+```bash
+COMPILE_ENDPOINT=https://<user>-latex-compile-service.hf.space \
+  python3 scripts/build_packages_page.py
+```
+
+Leave `COMPILE_ENDPOINT` unset and the page behaves as before: local-only.
+
+Overleaf works the same way and this is worth knowing — it looks like it
+compiles in the browser, but it ships your document to their CLSI service, runs
+LaTeX in a container there, and returns a PDF. Same shape, their hardware.
 
 Overleaf itself is not vendored — it is AGPL-3.0 and needs MongoDB and Redis.
 Only the shared open-source editor foundation is used here.
