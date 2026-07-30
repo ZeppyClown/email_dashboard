@@ -75,7 +75,8 @@ the browser. There are two options, and the page uses whichever it finds:
 | Route | Where | Notes |
 |---|---|---|
 | **Local** `packages_server.py` | your Mac | Writes the PDF next to the `.tex`, runs the char-count gate. Nothing leaves the machine. |
-| **Hosted** `../latex-compile-space` | a free HF Space | Stateless: sends the source, gets PDF bytes back. Works on the published site. The preview is a blob, so the *stored* PDF still needs a local compile. |
+| **Published page → your local server** | your Mac | Same compiler, reached cross-origin from `github.io`. Keep `packages_server.py` running and Compile works there too. |
+| **Hosted** `../latex-compile-space` | unused | A stateless service, built and committed but not deployed. Set `COMPILE_ENDPOINT` if you ever want it. Not HF: Docker Spaces need PRO. |
 
 The `compiler:` pill in the top right says which is active.
 
@@ -130,8 +131,7 @@ Two browser rules make that non-obvious, and both are handled:
 Only `PAGE_ORIGIN` (default `https://zeppyclown.github.io`) and localhost are
 accepted; every other origin is refused at the preflight.
 
-**Only compiling needs a local process**, because a browser cannot run
-`tectonic`. That is the whole reason `packages_server.py` exists:
+Start it with:
 
 ```
 python3 scripts/packages_server.py
