@@ -19,6 +19,7 @@ API
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from functools import partial
@@ -42,7 +43,17 @@ MAX_BODY = 2_000_000
 # content-type forces a CORS preflight the attacker cannot satisfy, and the Host
 # check stops DNS rebinding pointing a hostile name at 127.0.0.1.
 ALLOWED_HOSTS = {f"localhost:{PORT}", f"127.0.0.1:{PORT}"}
-ALLOWED_ORIGINS = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
+
+# The published page lives on a different origin but talks to this server, so
+# that origin has to be named explicitly. Everything else is still refused, and
+# the JSON content-type requirement still forces a preflight a hostile page
+# cannot complete. Widen this only to origins you control.
+PAGE_ORIGIN = os.environ.get("PAGE_ORIGIN", "https://zeppyclown.github.io")
+ALLOWED_ORIGINS = {
+    f"http://localhost:{PORT}",
+    f"http://127.0.0.1:{PORT}",
+    PAGE_ORIGIN,
+}
 
 
 class Rejected(ValueError):
@@ -138,10 +149,36 @@ class Handler(SimpleHTTPRequestHandler):
             raise Rejected("body too large")
         return json.loads(self.rfile.read(n) or b"{}")
 
+    def _cors(self) -> None:
+        """Echo back an allowed Origin so a cross-origin caller can read us."""
+        origin = self.headers.get("Origin")
+        if origin in ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+
     def end_headers(self) -> None:
         # A recompiled PDF must not be served from cache, or the preview lies.
         self.send_header("Cache-Control", "no-store")
+        self._cors()
         super().end_headers()
+
+    def do_OPTIONS(self) -> None:
+        """CORS preflight. Chrome's Private Network Access also requires an
+        explicit opt-in before a public https page may reach 127.0.0.1."""
+        origin = self.headers.get("Origin")
+        if origin not in ALLOWED_ORIGINS:
+            self.send_response(403)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        if self.headers.get("Access-Control-Request-Private-Network") == "true":
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     # --- routes ---
     def do_GET(self) -> None:

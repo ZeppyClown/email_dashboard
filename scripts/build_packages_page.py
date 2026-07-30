@@ -233,6 +233,12 @@ let cur=null, saved='', dirRoot=null, live=false, autoTimer=null;
 
 /* CodeMirror 6 — the editor core Overleaf is built on. Falls back to a plain
    textarea if the vendored bundle is missing, so the page never dies on it. */
+// On the published page a relative /api/... hits GitHub, not this Mac. Address
+// the local server explicitly, and read the PDF as a blob rather than pointing
+// an iframe at http:// from an https:// page.
+const ON_LOCAL = location.port === '8765';
+const API = ON_LOCAL ? '' : 'http://localhost:8765';
+
 const dark = matchMedia('(prefers-color-scheme: dark)').matches;
 const ed = (() => {
   const host = $('ed');
@@ -304,7 +310,7 @@ async function handleFor(doc, create){
 
 /* ---------- capability 3: the compile server ---------- */
 async function api(path,opts){
-  const r=await fetch(path,opts);
+  const r=await fetch(API+path,opts);
   const d=await r.json().catch(()=>({error:'bad response'}));
   if(!r.ok||d.error) throw new Error(d.error||('HTTP '+r.status));
   return d;
@@ -376,7 +382,8 @@ async function select(btn, keep){
   title.textContent=d.tex;
   meta.textContent=d.kind+' · '+d.pkg+(d.pages?' · '+d.pages+'p':'')+(d.built?' · built '+d.built:'');
   stale.hidden=!d.stale;
-  frame.src = d.pdf ? pdfUrl(d)+'?t='+Date.now() : 'about:blank';
+  if(d.pdf && live && !ON_LOCAL){ showRemotePdf(d); }
+  else { frame.src = d.pdf ? pdfUrl(d)+'?t='+Date.now() : 'about:blank'; }
   if(!keep) say('');
 
   // Prefer the file on disk; the embedded copy is only a fallback.
@@ -452,6 +459,19 @@ async function hostedCompile(){
      +'the stored PDF still needs a local compile.','good');
 }
 
+async function showRemotePdf(d){
+  // Serving the compiled PDF over http:// into an https:// page: fetch it and
+  // hand the iframe a blob instead, which no mixed-content rule touches.
+  try{
+    const r=await fetch(API+'/resume-kit/output/'+d.pkg+'/'
+      +d.tex.replace(/\.tex$/,'.pdf')+'?t='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const url=URL.createObjectURL(await r.blob());
+    if(frame.dataset.blob) URL.revokeObjectURL(frame.dataset.blob);
+    frame.dataset.blob=url; frame.src=url;
+  }catch(e){ say('Compiled, but could not load the PDF back: '+e.message,'bad'); }
+}
+
 async function compile(){
   if(!live && ENDPOINT){ await save(); return hostedCompile(); }
   if(!await save()) return;
@@ -464,7 +484,8 @@ async function compile(){
         r.ok?'good':'bad');
     if(r.ok){
       // The server rewrote resume-kit/output; this page serves its own copy.
-      frame.src=pdfUrl(cur)+'?t='+Date.now();
+      if(ON_LOCAL){ frame.src=pdfUrl(cur)+'?t='+Date.now(); }
+      else { await showRemotePdf(cur); }
       stale.hidden=true;
       const b=document.querySelector('.doc[aria-current="true"] .badge'); if(b) b.remove();
       say(log.textContent+'\n\nRerun build_packages_page.py to refresh the stored copy.',
@@ -486,7 +507,7 @@ document.querySelectorAll('.doc').forEach(b=>b.addEventListener('click',()=>sele
 
 (async () => {
   if(FS_OK){ const h=await getDir().catch(()=>null); if(h&&await usable(h)) dirRoot=h; }
-  live = await fetch('/api/tex?path=').then(r=>r.status===400).catch(()=>false);
+  live = await fetch(API+'/api/tex?path=').then(r=>r.status===400).catch(()=>false);
   marks();
   select(document.querySelector('.doc'), true);
 })();

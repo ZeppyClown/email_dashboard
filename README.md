@@ -113,8 +113,22 @@ On the deployed page the first save prompts for a folder — pick
 no database anywhere in this: the `.tex` on disk is the only copy, which is
 what `tectonic` compiles and what git versions.
 
-Compiling is the one thing that always needs `packages_server.py`, because a
-browser cannot run `tectonic`.
+Compiling always needs `packages_server.py`, because a browser cannot run
+`tectonic` — but the **published page can use your local server too**. Keep the
+server running and `https://zeppyclown.github.io/...` will compile against it.
+
+Two browser rules make that non-obvious, and both are handled:
+
+- A relative `/api/...` on the published page hits GitHub, not your Mac, so the
+  page addresses `http://localhost:8765` explicitly when it is not already
+  local.
+- An https page reaching 127.0.0.1 needs CORS *and* Chrome's Private Network
+  Access opt-in, so the server answers preflights with
+  `Access-Control-Allow-Private-Network`. The compiled PDF is fetched as a blob
+  rather than framed over http, which no mixed-content rule allows.
+
+Only `PAGE_ORIGIN` (default `https://zeppyclown.github.io`) and localhost are
+accepted; every other origin is refused at the preflight.
 
 **Only compiling needs a local process**, because a browser cannot run
 `tectonic`. That is the whole reason `packages_server.py` exists:
