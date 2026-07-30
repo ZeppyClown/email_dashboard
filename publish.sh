@@ -37,15 +37,15 @@ if printf '%s' "$BUILD" | grep -q STALE; then
   exit 1
 fi
 
-if [ -z "$(git status --porcelain -- packages.html packages README.md scripts)" ]; then
+if [ -z "$(git status --porcelain -- packages.html packages vendor README.md scripts publish.sh)" ]; then
   echo "==> nothing changed; the live page is already current"
   exit 0
 fi
 
-git add -A -- packages.html packages README.md scripts
+git add -A -- packages.html packages vendor README.md scripts publish.sh
 echo
 echo "==> staged"
-git status --short -- packages.html packages README.md scripts
+git status --short -- packages.html packages vendor README.md scripts publish.sh
 
 if [ "$DRY" = 1 ]; then
   echo
