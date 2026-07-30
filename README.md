@@ -34,6 +34,40 @@ ES modules need to be served over HTTP, not opened as a `file://` URL:
 npx serve .
 ```
 
+## Resume packages page (local only)
+
+`packages.html` is a three-pane workbench over the compiled resume packages in
+`../resume-kit/output/`: the package list, a `.tex` editor, and a live PDF
+preview. It shows the session-file status per package and a **stale** badge
+whenever a `.tex` was edited after its PDF was built.
+
+Build the page, then run the server that backs it:
+
+```
+python3 scripts/build_packages_page.py     # rescan output/, rebuild the list
+python3 scripts/packages_server.py         # serve + the save/compile API
+open http://localhost:8765/email_dashboard/packages.html
+```
+
+- **Cmd-S** saves the `.tex`. **Cmd-Enter** saves, runs `tectonic`, reloads the
+  preview, and reports the kit's own char-count gate.
+- The format for the char-count gate comes from the `\documentclass`, not the
+  filename — the Danish Embassy package is called `..._cv.tex` but is built on
+  `resume.cls` and must be measured against resume limits.
+- Rerun `build_packages_page.py` after adding a *new* package; editing an
+  existing one needs only the server.
+
+Use `packages_server.py`, not `npx serve`/`http.server`. It roots itself at
+`/Volumes/T9/resume` so the PDFs one level up resolve, and it adds the API the
+editor needs. Without it the page still opens, read-only. The server binds to
+127.0.0.1 only, and every API path is resolved and checked to be a `.tex`
+inside `resume-kit/output` before it is read, written, or compiled — it writes
+files and runs a compiler, so do not put it on a network interface.
+
+`packages.html` is **gitignored on purpose.** This repo is public and deployed
+to GitHub Pages; a list of live job applications is not public data. The link
+in the board's topbar therefore 404s on the deployed site, by design.
+
 ## Board mechanics
 
 - Reading the board requires no login (public data, per RLS in `schema.sql`).
