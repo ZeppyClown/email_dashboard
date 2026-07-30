@@ -1,5 +1,10 @@
 <title>Hermes Digest Board</title>
 <link rel="stylesheet" href="style.css">
+<!-- Before style.css-dependent markup: the hide rule must be in effect on first
+     paint, or the board flashes up before auth-gate.js can hide it. -->
+<link rel="stylesheet" href="auth-gate.css">
+<div id="authgate" hidden></div>
+<script type="module" src="auth-gate.js"></script>
 
 <div class="topbar">
   <h1>Hermes Digest</h1>

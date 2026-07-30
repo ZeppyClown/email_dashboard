@@ -37,15 +37,18 @@ if printf '%s' "$BUILD" | grep -q STALE; then
   exit 1
 fi
 
-if [ -z "$(git status --porcelain -- packages.html packages vendor README.md scripts publish.sh)" ]; then
+# Stage everything the repo tracks rather than a hand-maintained path list.
+# The list approach silently dropped vendor/ and then auth-gate.* — a file the
+# page needed was published as a 404 both times. .gitignore is the filter.
+if [ -z "$(git status --porcelain)" ]; then
   echo "==> nothing changed; the live page is already current"
   exit 0
 fi
 
-git add -A -- packages.html packages vendor README.md scripts publish.sh
+git add -A
 echo
 echo "==> staged"
-git status --short -- packages.html packages vendor README.md scripts publish.sh
+git status --short
 
 if [ "$DRY" = 1 ]; then
   echo
