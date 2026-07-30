@@ -322,8 +322,20 @@ function marks(){
   grantB.hidden=!FS_OK||!!dirRoot;
   setState();
 }
+function staleText(){
+  stale.textContent = live
+    ? 'The .tex has changed since this PDF was built — press Compile to update it.'
+    : 'The .tex has changed since this PDF was built. Compiling needs the local '
+      + 'server: run scripts/packages_server.py and open localhost:8765.';
+}
+
 function setState(){
   const t=target();
+  staleText();
+  // A disabled button with no explanation is the same as a broken one.
+  compB.title = !cur ? '' : live ? 'Save and run tectonic (Cmd-Enter)'
+    : 'No compiler reachable. tectonic cannot run in a browser — start '
+      + 'scripts/packages_server.py and use localhost:8765.';
   // Always typeable; the editor never gates on a permission click.
   state.textContent = !cur ? ''
     : dirty() ? 'unsaved'
@@ -503,8 +515,7 @@ def render(packages: list[dict]) -> str:
         "<div class='log' id='log'></div></div>"
         "<div class='pane pdf show'><div class='head'><h3>PDF</h3>"
         "<span class='meta'>rendered output</span></div>"
-        "<div class='stalebar' id='stale' hidden>The .tex has changed since this PDF "
-        "was built — press Compile to update it.</div>"
+        "<div class='stalebar' id='stale' hidden></div>"
         "<iframe id='frame' title='PDF preview'></iframe></div>"
         "</div>"
         f"<script type='application/json' id='data'>{data}</script>"

@@ -37,6 +37,13 @@ PORT = 8765
 COMPILE_TIMEOUT = 120
 MAX_BODY = 2_000_000
 
+# Binding to localhost keeps other machines out, but not the browser already on
+# this one: any page you visit can POST to http://localhost:8765. A JSON
+# content-type forces a CORS preflight the attacker cannot satisfy, and the Host
+# check stops DNS rebinding pointing a hostile name at 127.0.0.1.
+ALLOWED_HOSTS = {f"localhost:{PORT}", f"127.0.0.1:{PORT}"}
+ALLOWED_ORIGINS = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
+
 
 class Rejected(ValueError):
     """A request asked for something outside the sandbox."""
@@ -111,6 +118,20 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _guard(self) -> None:
+        """Reject anything that did not come from this page in this browser."""
+        host = (self.headers.get("Host") or "").lower()
+        if host not in ALLOWED_HOSTS:
+            raise Rejected("unexpected Host header")
+        origin = self.headers.get("Origin")
+        if origin is not None and origin not in ALLOWED_ORIGINS:
+            raise Rejected("cross-origin request refused")
+        # Only application/json triggers a CORS preflight, which a hostile page
+        # cannot complete. Accepting text/plain would make every write forgeable.
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            raise Rejected("Content-Type must be application/json")
+
     def _body(self) -> dict:
         n = int(self.headers.get("Content-Length") or 0)
         if n > MAX_BODY:
@@ -139,6 +160,7 @@ class Handler(SimpleHTTPRequestHandler):
         if parsed.path not in ("/api/tex", "/api/compile"):
             return self._json({"error": "unknown endpoint"}, 404)
         try:
+            self._guard()
             data = self._body()
             tex = resolve_tex(data.get("path", ""))
         except Rejected as exc:
@@ -163,7 +185,10 @@ class Handler(SimpleHTTPRequestHandler):
         })
 
     def log_message(self, fmt: str, *args) -> None:
-        if "/api/" in (args[0] if args else ""):
+        # log_error passes ints here (send_error -> "code %d, message %s"), so
+        # this must not assume args[0] is a string. It used to, and every 404
+        # died with a TypeError before any response was written.
+        if any("/api/" in a for a in args if isinstance(a, str)):
             super().log_message(fmt, *args)
 
 
