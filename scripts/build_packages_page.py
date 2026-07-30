@@ -245,7 +245,10 @@ async function grant(){
     if(!await usable(h)) return;
     dirRoot=h; await putDir(h); marks();
     say('Folder connected. The editor now reads and writes the real files.','good');
-    if(cur) select(document.querySelector('.doc[aria-current="true"]'), true);
+    // Only re-read from disk when there is nothing to lose. Connecting the
+    // folder is also the first step of a save, and that save is carrying the
+    // edits that prompted it.
+    if(cur && !dirty()) select(document.querySelector('.doc[aria-current="true"]'), true);
   }catch(e){ if(e.name!=='AbortError') say('Could not open folder: '+e.message,'bad'); }
 }
 
@@ -264,6 +267,10 @@ async function api(path,opts){
 }
 
 /* ---------- ui ---------- */
+/* Where a save would land, best first. The server needs no permission at all,
+   so when it is up the folder grant is pure ceremony. */
+const target = () => dirRoot ? 'folder' : live ? 'server' : FS_OK ? 'ask' : 'none';
+
 function marks(){
   capFs.className='cap'+(dirRoot?' on':'');
   capFs.textContent=dirRoot?'folder connected':(FS_OK?'folder not connected':'no folder API');
@@ -273,11 +280,20 @@ function marks(){
   setState();
 }
 function setState(){
-  const can=!!dirRoot;
-  state.textContent = !cur ? '' : !can ? 'read-only' : dirty() ? 'unsaved' : 'saved';
-  state.className = dirty()&&can ? 'meta dirty' : 'meta';
-  ed.readOnly=!can;
-  saveB.disabled=!can||!dirty();
+  const t=target();
+  // Always typeable. Nothing is lost by letting someone edit a buffer, and
+  // making them hunt for a permission button before they can fix a word is
+  // the opposite of editing on the fly.
+  ed.readOnly=false;
+  state.textContent = !cur ? ''
+    : dirty() ? 'unsaved'
+    : t==='folder' ? 'saves to the file'
+    : t==='server' ? 'saves via the local server'
+    : t==='ask'    ? 'connect a folder to save'
+    : 'no save target — download only';
+  state.className = dirty() ? 'meta dirty' : 'meta';
+  saveB.disabled=!dirty();
+  saveB.textContent = t==='none' ? 'Download' : 'Save';
   compB.disabled=!live||!cur;
 }
 function say(m,k){ log.textContent=m||''; log.className='log'+(k?' '+k:''); }
@@ -304,14 +320,40 @@ async function select(btn, keep){
   setState();
 }
 
+function download(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ed.value],{type:'text/x-tex'}));
+  a.download=cur.tex; a.click(); URL.revokeObjectURL(a.href);
+  say('Downloaded '+cur.tex+' — this browser cannot write files in place, so '
+     +'copy it over '+cur.pkg+'/'+cur.tex+' yourself.');
+}
+
 async function save(){
-  if(!dirty()||!dirRoot) return true;
+  if(!cur||!dirty()) return true;
+  const text=ed.value;
+  let t=target();
+
+  if(t==='ask'){                      // first save doubles as the folder prompt
+    await grant();
+    t=target();
+    if(t==='ask'){ say('Not saved — no folder connected.','bad'); return false; }
+  }
+
   try{
-    const fh=await handleFor(cur,true);
-    const w=await fh.createWritable();
-    await w.write(ed.value); await w.close();
-    saved=ed.value; setState(); say('Saved '+cur.tex+'.','good');
-    return true;
+    if(t==='folder'){
+      const w=await (await handleFor(cur,true)).createWritable();
+      await w.write(text); await w.close();
+      saved=text; setState(); say('Saved '+cur.tex+' to the file.','good');
+      return true;
+    }
+    if(t==='server'){
+      await api('/api/tex',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({path:cur.pkg+'/'+cur.tex,text})});
+      saved=text; setState(); say('Saved '+cur.tex+' via the local server.','good');
+      return true;
+    }
+    download(); return false;         // nothing wrote to disk, so not "saved"
   }catch(e){ say('Save failed: '+e.message,'bad'); return false; }
 }
 

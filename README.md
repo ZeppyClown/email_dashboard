@@ -49,21 +49,25 @@ That copies each PDF and a first-page thumbnail into `packages/` and embeds the
 `.tex` source in the page. Rerun it whenever a package is added or recompiled
 outside the page.
 
-### Three layers
+### Editing
 
-The page degrades cleanly — each layer adds to the one below.
+**The editor is always typeable.** There is no mode to switch on. Change a
+bullet you do not like and press Cmd-S; the status beside the buttons always
+names where a save will land. Saves take the first route available:
 
-| Layer | Needs | What you get |
+| Route | Needs | Notes |
 |---|---|---|
-| View | nothing | LaTeX + PDF side by side, read-only. Works on the deployed Pages site. |
-| Edit | Chrome/Edge, one click | Reads and writes the real `.tex` on disk. No server. |
-| Compile | `packages_server.py` | The Compile button runs `tectonic` and the char-count gate. |
+| Local server | `packages_server.py` running | No permission prompt, any browser. The default when working locally. |
+| Folder handle | Chrome/Edge, one grant | Writes the file directly. The only route on the published site. Remembered in IndexedDB. |
+| Download | nothing | Firefox/Safari with no server. Lands in `~/Downloads`; copy it over yourself. |
 
-**Editing needs no server.** Press *Connect output folder* and pick
-`resume-kit/output`; the File System Access API then lets the page read and
-write those files directly, and the grant is remembered in IndexedDB. Chrome
-and Edge only — Firefox has no support and Safari will not write. Until then
-the editor shows the copy embedded at build time and stays read-only.
+On the deployed page the first save prompts for a folder — pick
+`resume-kit/output` and it writes straight to disk from the browser. There is
+no database anywhere in this: the `.tex` on disk is the only copy, which is
+what `tectonic` compiles and what git versions.
+
+Compiling is the one thing that always needs `packages_server.py`, because a
+browser cannot run `tectonic`.
 
 **Only compiling needs a local process**, because a browser cannot run
 `tectonic`. That is the whole reason `packages_server.py` exists:
