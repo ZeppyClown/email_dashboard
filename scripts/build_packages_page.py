@@ -226,7 +226,8 @@ const $ = id => document.getElementById(id);
 const frame=$('frame'), log=$('log'), state=$('state'),
       title=$('title'), meta=$('meta'), stale=$('stale'),
       saveB=$('save'), compB=$('compile'), grantB=$('grant'),
-      capFs=$('capFs'), capSrv=$('capSrv'), autoBox=$('auto');
+      capFs=$('capFs'), capSrv=$('capSrv'), autoBox=$('auto'),
+      goLocal=$('golocal');
 
 let cur=null, saved='', dirRoot=null, live=false, autoTimer=null;
 
@@ -328,13 +329,16 @@ function marks(){
   capSrv.className='cap'+((live||ENDPOINT)?' on':'');
   capSrv.textContent=live?'compiler: local':ENDPOINT?'compiler: hosted':'compiler offline';
   grantB.hidden=!FS_OK||!!dirRoot;
+  // Only meaningful when this page cannot compile and is not already local.
+  goLocal.hidden = live || location.hostname==='localhost';
   setState();
 }
 function staleText(){
   stale.textContent = (live||ENDPOINT)
     ? 'The .tex has changed since this PDF was built — press Compile to update it.'
     : 'The .tex has changed since this PDF was built. Compiling needs the local '
-      + 'server: run scripts/packages_server.py and open localhost:8765.';
+      + 'server. Start it with: python3 scripts/packages_server.py — then use '
+      + 'the local page, not this one.';
 }
 
 function setState(){
@@ -539,6 +543,8 @@ def render(packages: list[dict]) -> str:
         # So "is what I am looking at the version I just pushed?" is answerable
         # by looking, instead of by guessing about caches.
         f"<span class='cap' title='page build time'>built {datetime.now():%b %d %H:%M}</span>"
+        "<a class='btn' id='golocal' href='http://localhost:8765/email_dashboard/packages.html' hidden>"
+        "Open the local editor &rarr;</a>"
         "<button class='btn' id='grant' hidden>Connect output folder</button>"
         "<span class='cap' id='capFs'></span><span class='cap' id='capSrv'></span>"
         "</span></div>"
