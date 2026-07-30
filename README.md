@@ -57,10 +57,19 @@ numbers, code folding, bracket matching, undo history, and Cmd-F search. If the
 bundle is missing the page falls back to a plain textarea rather than breaking.
 See `vendor/README.md` to rebuild it.
 
-Tick **auto** in the editor header for Overleaf-style recompile-on-pause: about
-a second and a half after you stop typing, it saves and compiles. It is off by
-default because every run writes the `.tex` to disk, and it needs the local
-server since only that can run `tectonic`.
+**Save means "make the PDF match".** When a compiler is reachable, Save and
+Cmd-S write the `.tex` and immediately rebuild the PDF, and the button says so.
+Without one they only write the file, and the button says that instead. This
+mirrors Overleaf, where there is no save step at all: the document syncs
+continuously and a compile request rebuilds the PDF.
+
+Tick **auto** for recompile-on-pause — roughly a second and a half after you
+stop typing. Off by default because every run writes to disk.
+
+Compiling always needs the local server. Overleaf looks like it compiles in the
+browser but does not: it ships the document to their CLSI service, runs LaTeX in
+a container there, and returns a PDF. Same shape as `packages_server.py`, just
+their hardware.
 
 Overleaf itself is not vendored — it is AGPL-3.0 and needs MongoDB and Redis.
 Only the shared open-source editor foundation is used here.

@@ -345,7 +345,9 @@ function setState(){
     : 'no save target — download only';
   state.className = dirty() ? 'meta dirty' : 'meta';
   saveB.disabled=!dirty();
-  saveB.textContent = t==='none' ? 'Download' : 'Save';
+  saveB.textContent = t==='none' ? 'Download' : live ? 'Save & compile' : 'Save';
+  saveB.title = live ? 'Write the .tex and rebuild the PDF (Cmd-S)'
+    : 'Write the .tex. No compiler reachable, so the PDF will not change.';
   compB.disabled=!live||!cur;
 }
 function say(m,k){ log.textContent=m||''; log.className='log'+(k?' '+k:''); }
@@ -432,11 +434,11 @@ async function compile(){
   setState();
 }
 
-saveB.addEventListener('click',save);
+saveB.addEventListener('click',()=>live?compile():save());
 compB.addEventListener('click',compile);
 grantB.addEventListener('click',grant);
 document.addEventListener('keydown',e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save();}
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();live?compile():save();}
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();if(!compB.disabled)compile();}
 });
 addEventListener('beforeunload',e=>{if(dirty())e.preventDefault();});
