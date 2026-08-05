@@ -230,13 +230,17 @@ color:var(--muted);font-size:13px;padding:20px;text-align:center}
 
 JS = r"""
 const BUNDLE = JSON.parse(document.getElementById('data').textContent);
-const DATA = BUNDLE.docs, CLS = BUNDLE.cls, ENDPOINT = BUNDLE.endpoint;
+const CLS = BUNDLE.cls, ENDPOINT = BUNDLE.endpoint;
+// Rebuilt whenever the index is re-rendered, so `let` rather than `const`.
+// The embedded copy is only the first frame: refreshIndex() replaces it from
+// packages/manifest.json, and a connected folder replaces it from disk.
+let DATA = BUNDLE.docs;
 const $ = id => document.getElementById(id);
 const frame=$('frame'), log=$('log'), state=$('state'),
       title=$('title'), meta=$('meta'), stale=$('stale'),
       saveB=$('save'), compB=$('compile'), grantB=$('grant'),
       capFs=$('capFs'), capSrv=$('capSrv'), autoBox=$('auto'),
-      goLocal=$('golocal');
+      goLocal=$('golocal'), capData=$('capData');
 
 let cur=null, saved='', dirRoot=null, live=false, autoTimer=null;
 
@@ -304,6 +308,9 @@ async function grant(){
     if(!await usable(h)) return;
     dirRoot=h; await putDir(h); marks();
     say('Folder connected. The editor now reads and writes the real files.','good');
+    // Connecting the folder upgrades the index too, not just the editor —
+    // packages missing from the last build show up immediately.
+    if(!dirty()) await refreshFromFolder();
     // Only re-read from disk when there is nothing to lose. Connecting the
     // folder is also the first step of a save, and that save is carrying the
     // edits that prompted it.
@@ -381,6 +388,117 @@ function setState(){
 }
 function say(m,k){ log.textContent=m||''; log.className='log'+(k?' '+k:''); }
 
+/* ---------- the index, rebuilt at runtime ----------
+   The sidebar used to be baked into the HTML by build_packages_page.py, so a
+   package built after the last page generation was invisible — the page showed
+   three packages for a week while a fourth sat compiled on disk. Now the markup
+   below is the single renderer, fed from whichever source is freshest:
+     folder connected -> the real directory, no build step at all
+     manifest.json    -> refreshed by the build script, works on the published site
+     embedded bundle  -> the offline/file:// fallback                            */
+
+const esc = s => String(s??'').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function sideHTML(packages){
+  DATA = [];
+  let h = '';
+  for(const pkg of packages){
+    h += "<div class='pkg'><h2>" + esc(pkg.name) + "</h2>";
+    if(pkg.deadline) h += "<div class='dl'>deadline " + esc(pkg.deadline) + "</div>";
+    for(const doc of (pkg.docs||[])){
+      const idx = DATA.push(doc) - 1;
+      const img = doc.thumb ? "<img src='" + esc(doc.thumb) + "' alt=''>" : "";
+      const sub = doc.pdf ? (doc.pages ? doc.pages + " pages" : "compiled") : "not compiled";
+      const badge = doc.stale ? "<span class='badge'>stale</span>" : "";
+      h += "<button class='doc' data-id='" + idx + "'>" + img + "<span>"
+         + "<span class='k'>" + esc(doc.kind) + badge + "</span><br>"
+         + "<span class='s'>" + esc(sub) + "</span></span></button>";
+    }
+    for(const row of (pkg.status||[])){
+      if(!h.endsWith('</ul>')) h += "<ul class='status'>";
+      const up = String(row[1]).toUpperCase();
+      const cls = (up.includes('FAIL')||up.includes('NOT COMPILED')) ? " class='fail'"
+                : (up.includes('DONE')||up.includes('PASS')) ? " class='pass'" : "";
+      h += "<li><span>" + esc(row[0]) + "</span><span" + cls + ">" + esc(row[1]) + "</span></li>";
+    }
+    if((pkg.status||[]).length) h += "</ul>";
+    h += "</div>";
+  }
+  return h || "<p class='blank'>No compiled packages in resume-kit/output.</p>";
+}
+
+function wireDocs(){
+  document.querySelectorAll('.doc').forEach(b =>
+    b.addEventListener('click', () => select(b)));
+}
+
+function applyIndex(packages){
+  // Never blow away work in progress to show a fresher list.
+  if(dirty()) return false;
+  const keep = cur ? cur.pkg + '/' + cur.tex : null;
+  document.querySelector('.side').innerHTML = sideHTML(packages);
+  wireDocs();
+  const btns = [...document.querySelectorAll('.doc')];
+  const same = keep && btns.find(b => {
+    const d = DATA[b.dataset.id]; return d.pkg + '/' + d.tex === keep;
+  });
+  select(same || btns[0], true);
+  return true;
+}
+
+async function refreshIndex(){
+  try{
+    const r = await fetch('packages/manifest.json?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) return false;
+    const m = await r.json();
+    if(!Array.isArray(m.packages) || !m.packages.length) return false;
+    const ok = applyIndex(m.packages);
+    if(ok && m.built) capData.textContent = 'data ' + m.built;
+    return ok;
+  }catch(e){ return false; }
+}
+
+const KIND = f => /cover_letter|_cl\.tex$/i.test(f) ? 'Cover letter'
+  : /_cv\.tex$|_cv_/i.test(f) ? 'CV' : /resume/i.test(f) ? 'Resume' : 'Document';
+
+/* Enumerate resume-kit/output directly. This is the only path that cannot go
+   stale, because there is nothing between it and the files. */
+async function scanFolder(){
+  if(!dirRoot) return null;
+  const pkgs = [];
+  for await (const [name, h] of dirRoot.entries()){
+    if(h.kind !== 'directory') continue;
+    const files = {};
+    for await (const [fn, fh] of h.entries()) if(fh.kind === 'file') files[fn] = fh;
+    const docs = [];
+    for(const fn of Object.keys(files).sort()){
+      if(!fn.endsWith('.tex') || fn === 'resume.cls' || fn === 'cv.cls') continue;
+      const pdfName = fn.replace(/\.tex$/, '.pdf');
+      const texF = await files[fn].getFile();
+      const pdfF = files[pdfName] ? await files[pdfName].getFile() : null;
+      docs.push({
+        pkg: name, tex: fn, kind: KIND(fn), source: '', fromFs: true,
+        pdf: pdfF ? pdfName : '', thumb: '', pages: 0,
+        stale: !!(pdfF && texF.lastModified > pdfF.lastModified),
+        built: pdfF ? new Date(pdfF.lastModified).toISOString().slice(0,16).replace('T',' ') : '',
+      });
+    }
+    if(docs.length) pkgs.push({name, deadline:'', status:[], docs});
+  }
+  if(!pkgs.length) return null;
+  pkgs.sort((a,b) => a.name.localeCompare(b.name));
+  return pkgs;
+}
+
+async function refreshFromFolder(){
+  const pkgs = await scanFolder().catch(() => null);
+  if(!pkgs) return false;
+  const ok = applyIndex(pkgs);
+  if(ok) capData.textContent = 'data live from folder';
+  return ok;
+}
+
 async function select(btn, keep){
   if(!btn) return;
   if(!keep && dirty() && !confirm('Discard unsaved changes to '+cur.tex+'?')) return;
@@ -391,7 +509,10 @@ async function select(btn, keep){
   title.textContent=d.tex;
   meta.textContent=d.kind+' · '+d.pkg+(d.pages?' · '+d.pages+'p':'')+(d.built?' · built '+d.built:'');
   stale.hidden=!d.stale;
-  if(d.pdf && live && !ON_LOCAL){ showRemotePdf(d); }
+  // A folder-scanned doc may have no snapshot in packages/ at all — it was
+  // compiled after the last build. Read the PDF straight off disk instead.
+  if(d.fromFs && d.pdf && dirRoot){ showFsPdf(d); }
+  else if(d.pdf && live && !ON_LOCAL){ showRemotePdf(d); }
   else { frame.src = d.pdf ? pdfUrl(d)+'?t='+Date.now() : 'about:blank'; }
   if(!keep) say('');
 
@@ -479,6 +600,19 @@ async function showRemotePdf(d){
     if(frame.dataset.blob) URL.revokeObjectURL(frame.dataset.blob);
     frame.dataset.blob=url; frame.src=url;
   }catch(e){ say('Compiled, but could not load the PDF back: '+e.message,'bad'); }
+}
+
+async function showFsPdf(d){
+  try{
+    const dir=await dirRoot.getDirectoryHandle(d.pkg,{create:false});
+    const fh=await dir.getFileHandle(d.tex.replace(/\.tex$/,'.pdf'),{create:false});
+    const url=URL.createObjectURL(await fh.getFile());
+    if(frame.dataset.blob) URL.revokeObjectURL(frame.dataset.blob);
+    frame.dataset.blob=url; frame.src=url;
+  }catch(e){
+    frame.src='about:blank';
+    say('Could not read the PDF from the folder: '+e.message,'bad');
+  }
 }
 
 async function compile(){
@@ -575,13 +709,30 @@ document.addEventListener('keydown',e=>{
   if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();if(!compB.disabled)compile();}
 });
 addEventListener('beforeunload',e=>{if(dirty())e.preventDefault();});
-document.querySelectorAll('.doc').forEach(b=>b.addEventListener('click',()=>select(b)));
+wireDocs();
+
+// A package compiled while the page sits open should not need a reload to
+// appear. Re-check when the tab regains focus — cheap, and it is exactly when
+// you come back from having built something.
+addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && !dirty()) refreshNow();
+});
+
+async function refreshNow(){
+  if(await refreshFromFolder()) return;
+  await refreshIndex();
+}
 
 (async () => {
   if(FS_OK){ const h=await getDir().catch(()=>null); if(h&&await usable(h)) dirRoot=h; }
   live = await fetch(API+'/api/tex?path=').then(r=>r.status===400).catch(()=>false);
   marks();
   select(document.querySelector('.doc'), true);
+  // Freshest source wins. Both are no-ops when they cannot reach anything, so
+  // the embedded snapshot stays on screen rather than the page going blank.
+  if(!await refreshFromFolder()){
+    if(!await refreshIndex()) capData.textContent = 'data embedded snapshot';
+  }
 })();
 """
 
@@ -642,6 +793,10 @@ def render(packages: list[dict]) -> str:
         # So "is what I am looking at the version I just pushed?" is answerable
         # by looking, instead of by guessing about caches.
         f"<span class='cap' title='page build time'>built {datetime.now():%b %d %H:%M}</span>"
+        # The index is refreshed at runtime, so its age is a separate fact from
+        # the page's. Showing only the page build time is what made a week-old
+        # sidebar look current.
+        "<span class='cap' id='capData' title='where the package list came from'></span>"
         "<a class='btn' id='golocal' href='http://localhost:8765/email_dashboard/packages.html' hidden>"
         "Open the local editor &rarr;</a>"
         "<button class='btn' id='grant' hidden>Connect output folder</button>"
@@ -672,9 +827,32 @@ def render(packages: list[dict]) -> str:
     )
 
 
+def manifest(packages: list[dict]) -> dict:
+    """The package index as data, fetched by the page at load.
+
+    Written separately from packages.html so refreshing the list does not
+    require regenerating (and re-committing) a 70 KB page. The page falls back
+    to its embedded copy when this cannot be fetched — file://, or offline.
+    """
+    flat: list[dict] = []
+    out: list[dict] = []
+    for pkg in packages:
+        docs = []
+        for doc in pkg["docs"]:
+            docs.append(doc)
+            flat.append(doc)
+        out.append({"name": pkg["name"], "deadline": pkg["deadline"],
+                    "status": pkg["status"], "docs": docs})
+    return {"built": f"{datetime.now():%b %d %H:%M}", "packages": out,
+            "count": len(out), "docs": len(flat)}
+
+
 def main() -> None:
     packages = collect()
     PAGE.write_text(render(packages), encoding="utf-8")
+    ASSETS.mkdir(parents=True, exist_ok=True)
+    (ASSETS / "manifest.json").write_text(
+        json.dumps(manifest(packages), indent=1), encoding="utf-8")
     docs = [d for p in packages for d in p["docs"]]
     built = [d for d in docs if d["pdf"]]
     assets = sum(f.stat().st_size for f in ASSETS.rglob("*") if f.is_file()) / 1024 if ASSETS.exists() else 0
