@@ -50,6 +50,24 @@ TEMPLATE_CLS = ROOT / "resume-kit" / "resume_builder" / "templates" / "resume.cl
 SKIP = {"resume.cls", "cv.cls"}
 
 
+def supabase_public() -> dict:
+    """The *public* Supabase URL + anon key, lifted from config.js.
+
+    Safe to bake into the page: this is the same key index.html already ships,
+    and RLS (schema.sql) is what protects the data, not secrecy of the key.
+    The service_role key lives only in ~/.hermes/.env and never comes near here.
+    """
+    cfg = DASHBOARD / "config.js"
+    if not cfg.is_file():
+        return {}
+    text = cfg.read_text(encoding="utf-8", errors="replace")
+    url = re.search(r'SUPABASE_URL\s*=\s*"([^"]+)"', text)
+    key = re.search(r'SUPABASE_ANON_KEY\s*=\s*"([^"]+)"', text)
+    if not (url and key):
+        return {}
+    return {"url": url.group(1).rstrip("/"), "key": key.group(1)}
+
+
 def doc_kind(stem: str) -> str:
     low = stem.lower()
     if "cover_letter" in low or low.endswith("_cl"):
@@ -230,7 +248,7 @@ color:var(--muted);font-size:13px;padding:20px;text-align:center}
 
 JS = r"""
 const BUNDLE = JSON.parse(document.getElementById('data').textContent);
-const CLS = BUNDLE.cls, ENDPOINT = BUNDLE.endpoint;
+const CLS = BUNDLE.cls, ENDPOINT = BUNDLE.endpoint, SUPA = BUNDLE.supa || {};
 // Rebuilt whenever the index is re-rendered, so `let` rather than `const`.
 // The embedded copy is only the first frame: refreshIndex() replaces it from
 // packages/manifest.json, and a connected folder replaces it from disk.
@@ -445,6 +463,47 @@ function applyIndex(packages){
   });
   select(same || btns[0], true);
   return true;
+}
+
+/* Supabase holds the .tex for every package (scripts/push_tex_to_supabase.py).
+   Fresher than manifest.json because a row needs no git push — publishing a new
+   package is one script run, not a rebuild-commit-deploy cycle. PDFs are not in
+   the table (binary does not belong in a column), so each row inherits the
+   snapshot's PDF/thumbnail when one exists. */
+async function refreshFromSupabase(){
+  if(!SUPA.url || !SUPA.key) return false;
+  try{
+    const r = await fetch(SUPA.url + '/rest/v1/resume_docs'
+      + '?select=id,package,filename,kind,tex,pages,stale,built_at'
+      + '&order=package.asc,filename.asc',
+      {headers:{apikey:SUPA.key, Authorization:'Bearer '+SUPA.key}, cache:'no-store'});
+    if(!r.ok) return false;
+    const rows = await r.json();
+    if(!Array.isArray(rows) || !rows.length) return false;
+
+    // Snapshot assets, keyed the same way, so a PDF still renders.
+    const snap = {};
+    for(const d of BUNDLE.docs) snap[d.pkg + '/' + d.tex] = d;
+
+    const byPkg = new Map();
+    for(const row of rows){
+      const s = snap[row.id] || {};
+      if(!byPkg.has(row.package)) byPkg.set(row.package, []);
+      byPkg.get(row.package).push({
+        pkg: row.package, tex: row.filename, kind: row.kind,
+        source: row.tex || '', pages: row.pages || s.pages || 0,
+        stale: !!row.stale, pdf: s.pdf || '', thumb: s.thumb || '',
+        built: row.built_at ? String(row.built_at).slice(0,16).replace('T',' ') : (s.built||''),
+      });
+    }
+    const packages = [...byPkg.entries()].map(([name, docs]) => {
+      const s = (BUNDLE.index||[]).find(p => p.name === name) || {};
+      return {name, deadline: s.deadline || '', status: s.status || [], docs};
+    });
+    const ok = applyIndex(packages);
+    if(ok) capData.textContent = 'data live from Supabase';
+    return ok;
+  }catch(e){ return false; }
 }
 
 async function refreshIndex(){
@@ -720,6 +779,7 @@ addEventListener('visibilitychange', () => {
 
 async function refreshNow(){
   if(await refreshFromFolder()) return;
+  if(await refreshFromSupabase()) return;
   await refreshIndex();
 }
 
@@ -730,7 +790,7 @@ async function refreshNow(){
   select(document.querySelector('.doc'), true);
   // Freshest source wins. Both are no-ops when they cannot reach anything, so
   // the embedded snapshot stays on screen rather than the page going blank.
-  if(!await refreshFromFolder()){
+  if(!await refreshFromFolder() && !await refreshFromSupabase()){
     if(!await refreshIndex()) capData.textContent = 'data embedded snapshot';
   }
 })();
@@ -773,7 +833,13 @@ def render(packages: list[dict]) -> str:
 
     cls = TEMPLATE_CLS.read_text(encoding="utf-8", errors="replace") \
         if TEMPLATE_CLS.is_file() else ""
-    payload = {"docs": flat, "cls": cls, "endpoint": COMPILE_ENDPOINT}
+    payload = {"docs": flat, "cls": cls, "endpoint": COMPILE_ENDPOINT,
+               "supa": supabase_public(),
+               # Deadlines and gate rows come from the session files, which
+               # Supabase does not carry — kept here so a Supabase-sourced
+               # index keeps showing them.
+               "index": [{"name": p["name"], "deadline": p["deadline"],
+                          "status": p["status"]} for p in packages]}
     data = json.dumps(payload).replace("</", "<\\/")
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"

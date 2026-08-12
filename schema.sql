@@ -134,3 +134,38 @@ select category,
        count(*) as total
 from digest_items
 group by category;
+
+
+-- ---------------------------------------------------------------------------
+-- resume_docs — the .tex source for every generated package.
+--
+-- Written by scripts/push_tex_to_supabase.py with the service_role key. Read by
+-- packages.html so a newly generated resume appears on the published page without
+-- a rebuild or a git push. PDFs are NOT here: binary belongs in Storage, and the
+-- page gets them from the connected folder, the compile server, or the snapshot.
+-- ---------------------------------------------------------------------------
+
+create table if not exists resume_docs (
+  id        text primary key,          -- "<package>/<file.tex>"
+  package   text not null,
+  filename  text not null,
+  kind      text not null,             -- Resume | CV | Cover letter | Document
+  tex       text not null,
+  pages     int,
+  stale     boolean default false,     -- .tex newer than its .pdf
+  tex_at    timestamptz,
+  built_at  timestamptz,
+  updated_at timestamptz default now()
+);
+
+alter table resume_docs enable row level security;
+
+-- Same posture as digest_items: the world may read, only the service_role
+-- key (used by these scripts, never the browser) may write.
+drop policy if exists "public read" on resume_docs;
+create policy "public read" on resume_docs for select using (true);
+
+revoke insert, update, delete on resume_docs from anon, authenticated;
+grant select on resume_docs to anon, authenticated;
+
+create index if not exists idx_resume_docs_package on resume_docs(package);
