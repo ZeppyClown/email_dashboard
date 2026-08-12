@@ -1,6 +1,80 @@
 {
- "built": "Aug 12 09:35",
+ "built": "Aug 12 10:47",
  "packages": [
+  {
+   "name": "FinProjections",
+   "deadline": "",
+   "status": [
+    [
+     "Phase 0",
+     "DONE"
+    ],
+    [
+     "Phase 1",
+     "DONE (14 bullets)"
+    ],
+    [
+     "Skills",
+     "DONE"
+    ],
+    [
+     "Hermes (5 bullets)",
+     "DONE"
+    ],
+    [
+     "DBS (2 bullets)",
+     "DONE"
+    ],
+    [
+     "SUSS (3 bullets)",
+     "DONE"
+    ],
+    [
+     "Yap Motor (2 bullets)",
+     "DONE"
+    ],
+    [
+     "Additional projects (2 entries)",
+     "DONE"
+    ],
+    [
+     "Compile",
+     "DONE, 1 page, tectonic, page fill 100%"
+    ],
+    [
+     "Cover Letter",
+     "DONE, 1 page, 458 words, no em dashes"
+    ],
+    [
+     "Critique",
+     "NOT RUN"
+    ]
+   ],
+   "docs": [
+    {
+     "pkg": "FinProjections",
+     "kind": "Cover letter",
+     "tex": "e2e_finprojections_backend_cover_letter.tex",
+     "source": "\\documentclass[a4paper,11pt]{article}\n\\usepackage[left=0.9in,right=0.9in,top=0.7in,bottom=0.7in]{geometry}\n\\usepackage{hyperref}\n\\usepackage{parskip}\n\n\\pagestyle{empty}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{0.10in}\n\n\\begin{document}\n\n\\begin{center}\n    \\textbf{\\LARGE Victor Chua} \\\\[2pt]\n    Singapore \\textbar\\\n    +65 9190 5651 \\textbar\\\n    \\href{mailto:chua1102@e.ntu.edu.sg}{chua1102@e.ntu.edu.sg} \\textbar\\\n    \\href{https://github.com/zeppyclown}{github.com/zeppyclown}\n\\end{center}\n\n\\vspace{0.12in}\n\\hrule\n\\vspace{0.12in}\n\nJason Leen \\textbar\\ FinProjections, a company by Udiyo Pte Ltd \\hfill 12 August 2026\n\n\\vspace{0.03in}\nDear Jason,\n\nYou asked for a backend or data project where the database design was mine, so here is that first.\n\nI built and own the Postgres layer behind Hermes, a dashboard that ingests career emails and job\nlistings and serves the application documents I generate from them:\n\\href{https://github.com/ZeppyClown/email_dashboard}{github.com/ZeppyClown/email\\_dashboard}. Read\n\\texttt{schema.sql} rather than this letter. Three decisions in it are the ones I would defend.\nThe primary key is a content hash of the source listing, not a random UUID, because the scraper\nre-runs over overlapping windows and the same job has to land on the same row instead of quietly\nduplicating. Each record is split on purpose: fields I filter or constrain are typed columns with\nCHECK constraints and indexes, while per-category free-form detail sits in one JSONB column, so\nadding a fact costs no migration and no table-per-category sprawl. Access is enforced in the\ndatabase, not the client: row-level security allows public read, but updates are gated on a\nspecific JWT email claim rather than \\texttt{auth.role()}, because any stranger who requests a\nmagic link for their own address would satisfy a role check. Inserts and deletes are revoked from\nbrowser roles, and the update grant is column-scoped to two columns out of sixteen.\n\nThat is the closest I have come to what you describe, and I should be straight that it is\nsingle-owner. I have not designed tenant isolation at scale, only the mechanism underneath it.\n\nOn accuracy: reviewing an evaluation pipeline at my current internship, I found the headline\nfigure had been measured on the same examples used to ground the judge, so it was not a blind\ntest. I re-reported it on held-out data and labelled the old number, even though the\nbetter-looking one was already in circulation. I also built their invoice pipeline, extracting\nvendor, amount and billing period from PDFs on-premises so financial documents never leave the\nnetwork.\n\nI read and write plain JavaScript with no framework, and I write schemas as their own data\ndictionary, each column carrying why it exists and what I rejected. I use MCP daily as a consumer\nbut have not built a server; structuring data so agents can use it reliably is the part of this\nrole I most want to learn.\n\nOne honest flag: the listing says ASAP and full time, and I return to NTU for my third year this\nmonth. I can commit consistent remote hours on a schedule agreed up front, but I would rather say\nthat now than disappoint you in week two. If the hours are flexible, I would like to talk.\n\n\\vspace{0.10in}\nYours sincerely, \\\\\nVictor Chua\n\n\\end{document}\n",
+     "pdf": "packages/FinProjections/e2e_finprojections_backend_cover_letter.pdf",
+     "thumb": "packages/FinProjections/e2e_finprojections_backend_cover_letter-p1.png",
+     "pages": 1,
+     "built": "2026-08-12 10:45",
+     "stale": false
+    },
+    {
+     "pkg": "FinProjections",
+     "kind": "Resume",
+     "tex": "e2e_finprojections_backend_resume.tex",
+     "source": "\\documentclass[a4paper,9.5pt]{article}\n\\usepackage[left=0.45in,right=0.45in,top=0.08in,bottom=0.08in]{geometry}\n\\usepackage{hyperref}\n\\usepackage{titlesec}\n\\usepackage{enumitem}\n\n\\pagestyle{empty}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{0.04in}\n\n\\setlist[itemize]{nosep, topsep=0.2em, left=0.2em, before=\\vspace{-\\parskip}}\n\n\\titleformat{\\section}{\\normalfont\\large\\bfseries}{}{0pt}{}[\\titlerule]\n\\titlespacing*{\\section}{0em}{0em}{0em}\n\n\\begin{document}\n\n\\begin{center}\n    \\textbf{\\LARGE Victor Chua} \\\\\n    Singapore \\textbar\\\n    +65 9190 5651 \\textbar\\\n    \\href{mailto:chua1102@e.ntu.edu.sg}{chua1102@e.ntu.edu.sg} \\textbar\\\n    \\href{https://github.com/zeppyclown}{github.com/zeppyclown} \\textbar\\\n    \\href{https://www.linkedin.com/in/vicchua123}{linkedin.com/in/vicchua123} \\\\\n    Backend \\& Data Architecture \\textbar\\ Postgres Schema Design, JSONB Modelling, Row-Level Security \\textbar\\ Open to remote\n\\end{center}\n\\vspace{-8pt}\n\n\\section{Database Project (Design Was Mine, End to End)}\n\n\\textbf{Hermes} -- Postgres data layer for a job-application and document dashboard \\textbar\\ \\href{https://github.com/ZeppyClown/email_dashboard}{github.com/ZeppyClown/email\\_dashboard} \\hfill Jul 2026 -- Present\n\n\\begin{itemize}\n    \\item Designed and own the relational schema: \\textbf{content-hash text primary keys} so re-ingesting the same source row is idempotent rather than duplicating it, \\textbf{CHECK}-constrained status and category enums, indexes on the four filtered columns, and a \\texttt{plpgsql} trigger maintaining \\texttt{updated\\_at}\n    \\item Split each record deliberately between real columns and one \\textbf{JSONB} field: queried and constrained facts are typed columns, while per-category free-form detail is JSONB, so adding a field costs no migration and no table-per-category sprawl\n    \\item Enforced \\textbf{role-scoped access in the database, not the client}: \\textbf{row-level security} with public read, updates gated on a JWT email claim rather than \\texttt{auth.role()} (which any signed-in stranger would pass), INSERT/DELETE revoked from browser roles, and \\textbf{column-level UPDATE grants} limiting clients to two of sixteen columns\n    \\item Wrote the schema as its own \\textbf{data dictionary}: each column carries why it exists and which alternative was rejected, and every statement is idempotent (\\texttt{add column if not exists}, constraint drop-and-recreate) so the file re-runs safely against a database created earlier\n    \\item Built the read path in \\textbf{plain JavaScript} over the \\textbf{PostgREST} API with a three-layer fallback (live table, then manifest, then embedded snapshot), plus Python sync jobs writing through the service-role key so the browser never holds a write credential\n\\end{itemize}\n\n\\section{Work Experience}\n\n\\textbf{DBS Bank} \\hfill Singapore \\\\\n{\\sl Data Engineer Intern} \\hfill May 2023 -- May 2024\n\n\\begin{itemize}\n    \\item Built a \\textbf{SQL}/Grafana monitoring layer over a production pipeline running \\textbf{3,000+ jobs a day}, modelling runtime and memory per pipeline version so bottlenecks could be compared across versions; teams acted on it for \\textbf{20\\% RAM} and \\textbf{15\\%} runtime gains\n    \\item Wrote a \\textbf{REST client} for the team's \\textbf{Elasticsearch} store and merged it into the shared internal Python library, giving production models real-time feature retrieval through common infrastructure for the first time\n\\end{itemize}\n\n\\textbf{SUSS Digital Solutions \\& AI} \\hfill Singapore \\\\\n{\\sl AI \\& Software Engineer Intern} \\hfill May 2026 -- Aug 2026\n\n\\begin{itemize}\n    \\item Built an invoice processing pipeline extracting vendor, amount, department and billing period from PDFs, running the model \\textbf{on-premises} specifically so financial documents never left the network; cut a 10-minute manual workflow to one-click review across \\textbf{50+ invoices}\n    \\item Built an offline \\textbf{regression harness} replaying every stored report through the scoring rules in about a second at zero API cost, then injected deliberate faults to prove each rule actually fails when violated rather than passing silently\n    \\item Caught that the headline accuracy figure had been measured on examples used to ground the judge, and re-reported it on \\textbf{held-out} data, in a team codebase where the contaminated number was already in circulation\n\\end{itemize}\n\n\\textbf{Yap Motor} \\hfill Singapore \\\\\n{\\sl Machine Learning Intern} \\hfill Dec 2025 -- Jan 2026\n\n\\begin{itemize}\n    \\item Shipped the company's first production AI system, a retrieval service over 500+ pages of multilingual repair manuals used daily by \\textbf{24 mechanics}, still running \\textbf{6 months} later; reached \\textbf{90\\% retrieval precision} across 8 diagnostic categories\n    \\item Designed its metadata model (make, model, year parsed from free text into typed filters) and fixed two production failures traced to schema validation and case-sensitive metadata matching\n\\end{itemize}\n\n\\section{Additional Projects}\n\n\\textbf{Music teaching platform} -- Firestore backend \\hfill 2022\n\n\\begin{itemize}\n    \\item Designed a \\textbf{6-collection} schema (users, lessons, homework, notifications, chat rooms, messages) with linked lesson-to-homework records, and implemented \\textbf{role-based access control} giving teacher, student and parent accounts different visibility over the same data\n\\end{itemize}\n\n\\textbf{Drum Hub} -- offline sheet-music reader, published model under MIT \\textbar\\ \\href{https://huggingface.co/Icyautumn/drum-omr-mobilenetv3}{hf.co/Icyautumn/drum-omr-mobilenetv3} \\hfill 2026\n\n\\section{Education}\n\n\\textbf{Nanyang Technological University}, B.Comp (Computer Science), Turing AI Scholars \\hfill Aug 2024 -- Dec 2028 \\\\\nThird year from August 2026. Coursework: Databases, Data Structures \\& Algorithms, Software Engineering, Machine Learning \\\\\n\\textbf{Temasek Polytechnic}, Diploma in Information Technology \\hfill 2021 -- 2024\n\n\\section{Technical Skills}\n\\textbf{Databases:} PostgreSQL (schema design, JSONB, indexes, CHECK constraints, triggers, views, row-level security), SQL, SQLite, Firestore, Elasticsearch, ChromaDB \\\\\n\\textbf{Backend:} Python, FastAPI, REST API design, PostgREST, Supabase, Firebase Cloud Functions, service-role vs client credential separation \\\\\n\\textbf{Languages:} Python, SQL, TypeScript, JavaScript (plain ES modules, no framework), Dart \\\\\n\\textbf{Data \\& Docs:} Data dictionaries, idempotent DDL, migration-safe column addition, Git, Grafana, LLM APIs and on-premises inference\n\\end{document}\n",
+     "pdf": "packages/FinProjections/e2e_finprojections_backend_resume.pdf",
+     "thumb": "packages/FinProjections/e2e_finprojections_backend_resume-p1.png",
+     "pages": 1,
+     "built": "2026-08-12 10:44",
+     "stale": false
+    }
+   ]
+  },
   {
    "name": "HorizonLabs",
    "deadline": "",
@@ -294,6 +368,6 @@
    ]
   }
  ],
- "count": 5,
- "docs": 8
+ "count": 6,
+ "docs": 10
 }
