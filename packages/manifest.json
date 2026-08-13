@@ -1,5 +1,5 @@
 {
- "built": "Aug 12 10:47",
+ "built": "Aug 13 15:49",
  "packages": [
   {
    "name": "FinProjections",
@@ -71,6 +71,80 @@
      "thumb": "packages/FinProjections/e2e_finprojections_backend_resume-p1.png",
      "pages": 1,
      "built": "2026-08-12 10:44",
+     "stale": false
+    }
+   ]
+  },
+  {
+   "name": "HP",
+   "deadline": "",
+   "status": [
+    [
+     "Phase 0",
+     "DONE"
+    ],
+    [
+     "Phase 1",
+     "DONE (13 bullets)"
+    ],
+    [
+     "Skills",
+     "DONE"
+    ],
+    [
+     "Drum Hub (5 bullets)",
+     "DONE"
+    ],
+    [
+     "SUSS (4 bullets)",
+     "DONE"
+    ],
+    [
+     "DBS (2 bullets)",
+     "DONE"
+    ],
+    [
+     "Yap Motor (1 bullet)",
+     "DONE"
+    ],
+    [
+     "Research + Education",
+     "DONE"
+    ],
+    [
+     "Compile",
+     "DONE, 1 page, tectonic, 93% fill"
+    ],
+    [
+     "Cover Letter",
+     "DONE, 1 page, 545 words, no em dashes"
+    ],
+    [
+     "Critique",
+     "NOT RUN"
+    ]
+   ],
+   "docs": [
+    {
+     "pkg": "HP",
+     "kind": "Cover letter",
+     "tex": "e2e_hp_ml_ai_intern_cover_letter.tex",
+     "source": "\\documentclass[a4paper,11pt]{article}\n\\usepackage[left=0.9in,right=0.9in,top=0.7in,bottom=0.7in]{geometry}\n\\usepackage{hyperref}\n\\usepackage{parskip}\n\n\\pagestyle{empty}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{0.10in}\n\n\\begin{document}\n\n\\begin{center}\n    \\textbf{\\LARGE Victor Chua} \\\\[2pt]\n    Singapore \\textbar\\\n    +65 9190 5651 \\textbar\\\n    \\href{mailto:chua1102@e.ntu.edu.sg}{chua1102@e.ntu.edu.sg} \\textbar\\\n    \\href{https://github.com/zeppyclown}{github.com/zeppyclown}\n\\end{center}\n\n\\vspace{0.12in}\n\\hrule\n\\vspace{0.12in}\n\nHP Inc., Singapore \\hfill Requisition UNI4651 \\hfill 13 August 2026\n\n\\vspace{0.03in}\nDear Hiring Team,\n\nI am applying for the College Intern position in Machine Learning and Artificial Intelligence. I am\nan NTU Computer Science undergraduate in the Turing AI Scholars Programme and can commit full time\nfrom January 2027 for five to six months, which matches the window in the posting.\n\nYour first listed deliverable is an annotated dataset of print images. That is the part of this\nrole I have already done end to end, on my own. No open labelled dataset existed for drum notation,\nso I built one: 19,948 labelled images from 264 source documents, 19 symbol classes and 10 duration\nclasses, split by source document rather than at random so that no page could leak between train\nand test. I audited the labels across more than twenty rounds of thirty-sample random checks before\ntraining anything, and augmented with rotation, brightness and blur specifically so the model would\nsurvive skewed, faded and poorly scanned pages instead of only clean renders. Dealing with degraded\nprint is not incidental to that project; it is most of it.\n\nOn the model, I trained a dual-head MobileNetV3-Small that classifies symbol type and duration at\nevery position across a page in a single pass, reaching 90.9\\% duration accuracy and 97.4\\% per-cell\naccuracy on 1,924 held-out images from 26 sources the model had never seen. I documented the failure\nmodes alongside the headline figures, exported to ONNX so inference runs locally at no per-image\ncost, and published the weights under MIT. I also built the review interface in TypeScript and\nElectron, because a recognition model that no human can inspect or correct does not get trusted.\n\nI should be straight about the gap. I have not built a dedicated anomaly detection model. My\nrecognition work is supervised classification, and detecting print artifacts, misprints and\ndistortions is a different problem, closer to modelling what normal looks like and measuring\ndeparture from it. What I bring to it is the surrounding discipline: at my current internship I\nbuilt an automated quality-assessment pipeline that scores recordings against a rubric, ranks them\nacross a cohort, and regenerates a staff dashboard on every run, and I deliberately made it report\nwhich factor drove each low score rather than a bare number, because a reviewer needs the likely\ncause, not a verdict. That is the same instinct your root cause analysis deliverable asks for. At\nDBS I built the dashboard equivalent at scale, tracking memory and runtime across a pipeline of\n3,000+ jobs a day broken down per version so a regression could be attributed to the release that\nintroduced it.\n\nI have also learned to distrust my own numbers. On a recent evaluation I found the headline accuracy\nhad been measured on the same examples used to ground the judge, so it was not a blind test. I\nre-ran it on held-out data and reported both figures, even though the better-looking one was already\ncirculating. On a project whose success criteria include a performance evaluation report, I would\nrather be the person who catches that early.\n\nThank you for your consideration. I would welcome the chance to discuss the project.\n\n\\vspace{0.10in}\nYours sincerely, \\\\\nVictor Chua\n\n\\end{document}\n",
+     "pdf": "packages/HP/e2e_hp_ml_ai_intern_cover_letter.pdf",
+     "thumb": "packages/HP/e2e_hp_ml_ai_intern_cover_letter-p1.png",
+     "pages": 1,
+     "built": "2026-08-13 15:47",
+     "stale": false
+    },
+    {
+     "pkg": "HP",
+     "kind": "Resume",
+     "tex": "e2e_hp_ml_ai_intern_resume.tex",
+     "source": "\\documentclass[a4paper,9.5pt]{article}\n\\usepackage[left=0.45in,right=0.45in,top=0.08in,bottom=0.08in]{geometry}\n\\usepackage{hyperref}\n\\usepackage{titlesec}\n\\usepackage{enumitem}\n\n\\pagestyle{empty}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{0.04in}\n\n\\setlist[itemize]{nosep, topsep=0.2em, left=0.2em, before=\\vspace{-\\parskip}}\n\n\\titleformat{\\section}{\\normalfont\\large\\bfseries}{}{0pt}{}[\\titlerule]\n\\titlespacing*{\\section}{0em}{0em}{0em}\n\n\\begin{document}\n\n\\begin{center}\n    \\textbf{\\LARGE Victor Chua} \\\\\n    Singapore \\textbar\\\n    +65 9190 5651 \\textbar\\\n    \\href{mailto:chua1102@e.ntu.edu.sg}{chua1102@e.ntu.edu.sg} \\textbar\\\n    \\href{https://github.com/zeppyclown}{github.com/zeppyclown} \\textbar\\\n    \\href{https://www.linkedin.com/in/vicchua123}{linkedin.com/in/vicchua123} \\\\\n    Singaporean Citizen \\textbar\\ \\textbf{Available full time from January 2027 for 5 to 6 months} \\\\\n    Computer Vision on Document Images \\textbar\\ Dataset Curation \\& Annotation \\textbar\\ Model Training, Evaluation \\& Reporting\n\\end{center}\n\\vspace{-8pt}\n\n\\section{Machine Learning Project: Recognition on Printed Document Images}\n\n\\textbf{Drum Hub} -- optical recognition of printed sheet music \\textbar\\ \\href{https://huggingface.co/Icyautumn/drum-omr-mobilenetv3}{hf.co/Icyautumn/drum-omr-mobilenetv3} \\hfill Jun 2026 -- Present\n\n\\begin{itemize}\n    \\item \\textbf{Built the annotated dataset myself} because no open labelled dataset for this notation existed: \\textbf{19,948 labelled images} from 264 sources across 19 symbol classes and 10 duration classes, split \\textbf{by source document} rather than at random so no page leaks between train and test\n    \\item Ran \\textbf{20+ rounds of 30-sample random QC} on the labels at 100\\% agreement before training, and augmented with rotation, brightness and blur so the model holds up on skewed, faded and low-quality scans rather than only on clean renders\n    \\item Designed and trained a \\textbf{dual-head MobileNetV3-Small} (2.47M params) by two-phase transfer learning, classifying symbol type and duration \\textbf{per position across the page} in one pass: \\textbf{90.9\\%} duration accuracy, \\textbf{97.4\\%} per-cell accuracy, F1 0.93 and 0.89 on the two most common classes\n    \\item Evaluated on \\textbf{1,924 held-out images from 26 unseen sources} and wrote up the failure modes rather than only the headline number; exported to \\textbf{ONNX} and published weights under MIT, so inference runs locally at no per-image cost\n    \\item Built the reviewing front end in \\textbf{TypeScript} and \\textbf{Electron}, rendering recognised output as an editable score with note-level correction, so a human can inspect and fix model output instead of trusting it blind\n\\end{itemize}\n\n\\section{Work Experience}\n\n\\textbf{SUSS Digital Solutions \\& AI} \\hfill Singapore \\\\\n{\\sl AI \\& Software Engineer Intern} \\hfill May 2026 -- Aug 2026\n\n\\begin{itemize}\n    \\item Built an end-to-end automated quality-assessment pipeline over 3-hour lecture recordings: local transcription, per-module scoring against a rubric I designed, composite ranking across the cohort, and a regenerated staff-facing \\textbf{HTML report and dashboard} on every run\n    \\item Made the scoring layer \\textbf{diagnostic rather than a single number}, surfacing which factor drove each low score so a reviewer sees the likely cause instead of a verdict, and flagging low-engagement segments by timestamp for review\n    \\item Replaced LLM-graded scoring with a \\textbf{deterministic 7-factor formula} over measured acoustics, so every reported figure reconciles to a stored measurement; benchmarked a large model against that formula and kept it out of the scoring path\n    \\item Caught that a headline accuracy figure had been measured on the same examples used to ground the judge, re-ran it on \\textbf{held-out} data, and reported both, in a team codebase where the contaminated number was already circulating\n\\end{itemize}\n\n\\textbf{DBS Bank} \\hfill Singapore \\\\\n{\\sl Data Engineer Intern} \\hfill May 2023 -- May 2024\n\n\\begin{itemize}\n    \\item Built a \\textbf{Grafana}/SQL dashboard tracking memory and runtime across a pipeline running \\textbf{3,000+ jobs a day}, broken down per pipeline version so a regression could be attributed to the release that introduced it, which is how teams reached \\textbf{20\\% RAM} and \\textbf{15\\%} runtime gains\n    \\item Wrote a \\textbf{REST client} for the team's \\textbf{Elasticsearch} store into the shared internal Python library, giving production models real-time feature retrieval through common infrastructure for the first time\n\\end{itemize}\n\n\\textbf{Yap Motor} \\hfill Singapore \\\\\n{\\sl Machine Learning Intern} \\hfill Dec 2025 -- Jan 2026\n\n\\begin{itemize}\n    \\item Shipped the company's first production AI system, a retrieval service over 500+ pages of multilingual manuals used daily by \\textbf{24 mechanics} and still running \\textbf{6 months} later; reached \\textbf{90\\% retrieval precision} across 8 diagnostic categories, validated against a month of structured feedback on live queries rather than a static test set\n\\end{itemize}\n\n\\section{Research}\n\n\\textbf{Generative HCI Translation Interface} -- NTU Turing AI Scholars Programme \\hfill May 2025 -- Aug 2025 \\\\\nCo-designed a search-based LLM paradigm for computer-assisted translation and solely implemented the bidirectional generation state machine. Research poster presented at NTU TAISP, supervised by Dr Grandee Lee; paper in preparation.\n\n\\section{Education}\n\n\\textbf{Nanyang Technological University}, B.Comp (Computer Science), Turing AI Scholars \\hfill Aug 2024 -- Dec 2028 \\\\\nCoursework: Machine Learning, Databases, Data Structures \\& Algorithms, Software Engineering \\\\\n\\textbf{Temasek Polytechnic}, Diploma in Information Technology \\hfill 2021 -- 2024\n\n\\section{Technical Skills}\n\\textbf{ML \\& Computer Vision:} PyTorch, MobileNetV3, transfer learning, multi-head architectures, image classification on document scans, data augmentation, ONNX Runtime, HuggingFace \\\\\n\\textbf{Dataset \\& Evaluation:} Annotation pipeline design, leakage-safe splitting, sampled QC audits, held-out evaluation, per-class F1, failure-mode analysis, LLM-as-judge rubrics \\\\\n\\textbf{Interfaces \\& Dashboarding:} Grafana, Streamlit, self-contained HTML reporting, Electron, TypeScript, image and document upload pipelines \\\\\n\\textbf{Languages \\& Backend:} Python, SQL, TypeScript, JavaScript, FastAPI, PostgreSQL, Elasticsearch, ChromaDB, Git\n\\end{document}\n",
+     "pdf": "packages/HP/e2e_hp_ml_ai_intern_resume.pdf",
+     "thumb": "packages/HP/e2e_hp_ml_ai_intern_resume-p1.png",
+     "pages": 1,
+     "built": "2026-08-13 15:47",
      "stale": false
     }
    ]
@@ -368,6 +442,6 @@
    ]
   }
  ],
- "count": 6,
- "docs": 10
+ "count": 7,
+ "docs": 12
 }
